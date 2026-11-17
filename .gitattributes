@@ -1,0 +1,18 @@
+# Normalise line endings so builds and merges behave the same on every machine.
+* text=auto eol=lf
+
+# Windows batch files keep CRLF (they ship that way today).
+*.bat text eol=crlf
+
+# Never let git touch binary assets.
+*.apk binary
+*.aab binary
+*.jar binary
+*.keystore binary
+*.jks binary
+*.png binary
+*.webp binary
+*.jpg binary
+*.gif binary
+*.ttf binary
+*.otf binary
