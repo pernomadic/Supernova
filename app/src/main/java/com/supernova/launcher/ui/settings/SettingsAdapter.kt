@@ -21,6 +21,10 @@ import com.supernova.launcher.databinding.ItemSettingSectionBinding
 import com.supernova.launcher.databinding.ItemSettingSliderBinding
 import com.supernova.launcher.databinding.ItemSettingStyleTargetBinding
 import com.supernova.launcher.databinding.ItemSettingToggleBinding
+import com.supernova.launcher.ui.theme.DarkStyle
+import com.supernova.launcher.ui.theme.LightStyle
+import com.supernova.launcher.ui.theme.ThemeMode
+import com.supernova.launcher.ui.theme.ThemeStyleVariant
 
 // Renders SettingItems from the latest LauncherPrefs snapshot. Prefs updates
 // rebind rows; controls the user is actively touching are left alone so a
@@ -611,14 +615,14 @@ class SettingsAdapter(private val previews: PreviewController) : RecyclerView.Ad
         fun bind(item: SettingItem.StyleTarget, prefs: LauncherPrefs) {
             binding.settingTitle.setText(item.title)
             val variantPrefs = when (item.variant) {
-                com.supernova.launcher.ui.theme.ThemeStyleVariant.DARK_DEFAULT ->
-                    prefs.copy(themeMode = com.supernova.launcher.ui.theme.ThemeMode.DARK, darkStyle = com.supernova.launcher.ui.theme.DarkStyle.DEFAULT)
-                com.supernova.launcher.ui.theme.ThemeStyleVariant.DARK_AMOLED ->
-                    prefs.copy(themeMode = com.supernova.launcher.ui.theme.ThemeMode.DARK, darkStyle = com.supernova.launcher.ui.theme.DarkStyle.AMOLED)
-                com.supernova.launcher.ui.theme.ThemeStyleVariant.LIGHT_DEFAULT ->
-                    prefs.copy(themeMode = com.supernova.launcher.ui.theme.ThemeMode.LIGHT, lightStyle = com.supernova.launcher.ui.theme.LightStyle.DEFAULT)
-                com.supernova.launcher.ui.theme.ThemeStyleVariant.LIGHT_FROSTED ->
-                    prefs.copy(themeMode = com.supernova.launcher.ui.theme.ThemeMode.LIGHT, lightStyle = com.supernova.launcher.ui.theme.LightStyle.FROSTED)
+                ThemeStyleVariant.DARK_DEFAULT ->
+                    prefs.copy(themeMode = ThemeMode.DARK, darkStyle = DarkStyle.DEFAULT)
+                ThemeStyleVariant.DARK_AMOLED ->
+                    prefs.copy(themeMode = ThemeMode.DARK, darkStyle = DarkStyle.AMOLED)
+                ThemeStyleVariant.LIGHT_DEFAULT ->
+                    prefs.copy(themeMode = ThemeMode.LIGHT, lightStyle = LightStyle.DEFAULT)
+                ThemeStyleVariant.LIGHT_FROSTED ->
+                    prefs.copy(themeMode = ThemeMode.LIGHT, lightStyle = LightStyle.FROSTED)
                 null -> prefs
             }
             val resolved = com.supernova.launcher.ui.theme.Styles

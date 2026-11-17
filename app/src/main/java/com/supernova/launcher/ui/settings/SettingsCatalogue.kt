@@ -83,7 +83,7 @@ object SettingsCatalogue {
         val editBadgedApps: () -> Unit = {},
         val postTestBadge: () -> Unit = {},
         val openPaletteDialog: () -> Unit = {},
-        val openStylePicker: (SurfaceId, com.supernova.launcher.ui.theme.ThemeStyleVariant?) -> Unit = { _, _ -> },
+        val openStylePicker: (SurfaceId) -> Unit = {},
         val showAutoBackups: () -> Unit = {},
         val exportBackup: () -> Unit = {},
         val importBackup: () -> Unit = {},
@@ -120,7 +120,14 @@ object SettingsCatalogue {
         // Opens a section by title (a built-in card's own settings page,
         // the Desktop search bar page).
         val openSection: (Int) -> Unit = {}
-    )
+    ) {
+        var openStylePickerWithVariant: (SurfaceId, com.supernova.launcher.ui.theme.ThemeStyleVariant?) -> Unit =
+            { id, _ -> openStylePicker(id) }
+
+        fun openStylePicker(surfaceId: SurfaceId, variant: com.supernova.launcher.ui.theme.ThemeStyleVariant?) {
+            openStylePickerWithVariant(surfaceId, variant)
+        }
+    }
 
     // Builds the rows whose tap offers one value out of a list. The pick
     // itself is the activity's (Actions.pickChoice), shown as a menu under
@@ -272,7 +279,8 @@ object SettingsCatalogue {
                 )
             },
             look = SettingItem.RowLook(
-                R.drawable.ic_style_accent, swatch = { com.supernova.launcher.ui.theme.ThemeEngine.accentColor(context, it.accentColor) }
+                R.drawable.ic_style_accent,
+                swatch = { com.supernova.launcher.ui.theme.ThemeEngine.accentColor(context, it.accentColor) }
             )
         )
     }
@@ -1903,22 +1911,78 @@ object SettingsCatalogue {
         com.supernova.launcher.ui.theme.ThemeStyleVariant.LIGHT_DEFAULT to R.string.style_group_surfaces_light_default,
         com.supernova.launcher.ui.theme.ThemeStyleVariant.LIGHT_FROSTED to R.string.style_group_surfaces_light_frosted
     ).map { (variant, titleRes) ->
-        SettingsSection(
-            titleRes,
-            listOf(
-                SettingItem.StyleTarget(R.string.settings_section_home, SurfaceId.HOME, { actions.openStylePicker(SurfaceId.HOME, variant) }, variant),
-                SettingItem.StyleTarget(R.string.settings_section_drawer, SurfaceId.DRAWER, { actions.openStylePicker(SurfaceId.DRAWER, variant) }, variant),
-                SettingItem.StyleTarget(R.string.settings_section_dock, SurfaceId.DOCK, { actions.openStylePicker(SurfaceId.DOCK, variant) }, variant),
-                SettingItem.StyleTarget(R.string.settings_section_folders, SurfaceId.FOLDER, { actions.openStylePicker(SurfaceId.FOLDER, variant) }, variant),
-                SettingItem.StyleTarget(R.string.style_popup, SurfaceId.POPUP, { actions.openStylePicker(SurfaceId.POPUP, variant) }, variant),
-                SettingItem.StyleTarget(R.string.style_cards, SurfaceId.CARDS, { actions.openStylePicker(SurfaceId.CARDS, variant) }, variant),
-                SettingItem.StyleTarget(R.string.desktop_search_bar, SurfaceId.SEARCH_BAR, { actions.openStylePicker(SurfaceId.SEARCH_BAR, variant) }, variant),
-                SettingItem.StyleTarget(R.string.drawer_search_bar, SurfaceId.DRAWER_SEARCH_BAR, { actions.openStylePicker(SurfaceId.DRAWER_SEARCH_BAR, variant) }, variant),
-                SettingItem.StyleTarget(R.string.settings, SurfaceId.SETTINGS, { actions.openStylePicker(SurfaceId.SETTINGS, variant) }, variant)
-            )
+        SettingsSection(titleRes, surfaceTargetsFor(actions, variant))
+    }
+    }
+
+    private fun surfaceTargetsFor(
+        actions: Actions,
+        variant: com.supernova.launcher.ui.theme.ThemeStyleVariant
+    ): List<SettingItem> = listOf(
+        SettingItem.StyleTarget(
+            R.string.settings_section_home, SurfaceId.HOME,
+            { actions.openStylePicker(SurfaceId.HOME, variant) }, variant
+        ),
+        SettingItem.StyleTarget(
+            R.string.settings_section_drawer, SurfaceId.DRAWER,
+            { actions.openStylePicker(SurfaceId.DRAWER, variant) }, variant
+        ),
+        SettingItem.StyleTarget(
+            R.string.settings_section_dock, SurfaceId.DOCK,
+            { actions.openStylePicker(SurfaceId.DOCK, variant) }, variant
+        ),
+        SettingItem.StyleTarget(
+            R.string.settings_section_folders, SurfaceId.FOLDER,
+            { actions.openStylePicker(SurfaceId.FOLDER, variant) }, variant
+        ),
+        SettingItem.StyleTarget(
+            R.string.style_popup, SurfaceId.POPUP,
+            { actions.openStylePicker(SurfaceId.POPUP, variant) }, variant
+        ),
+        SettingItem.StyleTarget(
+            R.string.style_cards, SurfaceId.CARDS,
+            { actions.openStylePicker(SurfaceId.CARDS, variant) }, variant
+        ),
+        SettingItem.StyleTarget(
+            R.string.desktop_search_bar, SurfaceId.SEARCH_BAR,
+            { actions.openStylePicker(SurfaceId.SEARCH_BAR, variant) }, variant
+        ),
+        SettingItem.StyleTarget(
+            R.string.drawer_search_bar, SurfaceId.DRAWER_SEARCH_BAR,
+            { actions.openStylePicker(SurfaceId.DRAWER_SEARCH_BAR, variant) }, variant
+        ),
+        SettingItem.StyleTarget(
+            R.string.settings, SurfaceId.SETTINGS,
+            { actions.openStylePicker(SurfaceId.SETTINGS, variant) }, variant
         )
-    }
-    }
+    )
+
+    private fun surfaceGroupRows(context: Context, actions: Actions): List<SettingItem> = listOf(
+        SettingItem.Row(
+            R.string.style_group_surfaces_dark_default,
+            subtitle = { context.getString(R.string.style_surfaces_sub_summary) },
+            onClick = { actions.openSection(R.string.style_group_surfaces_dark_default) },
+            look = SettingItem.RowLook(R.drawable.ic_style_dark)
+        ),
+        SettingItem.Row(
+            R.string.style_group_surfaces_dark_amoled,
+            subtitle = { context.getString(R.string.style_surfaces_sub_summary) },
+            onClick = { actions.openSection(R.string.style_group_surfaces_dark_amoled) },
+            look = SettingItem.RowLook(R.drawable.ic_style_dark)
+        ),
+        SettingItem.Row(
+            R.string.style_group_surfaces_light_default,
+            subtitle = { context.getString(R.string.style_surfaces_sub_summary) },
+            onClick = { actions.openSection(R.string.style_group_surfaces_light_default) },
+            look = SettingItem.RowLook(R.drawable.ic_style_light)
+        ),
+        SettingItem.Row(
+            R.string.style_group_surfaces_light_frosted,
+            subtitle = { context.getString(R.string.style_surfaces_sub_summary) },
+            onClick = { actions.openSection(R.string.style_group_surfaces_light_frosted) },
+            look = SettingItem.RowLook(R.drawable.ic_style_light)
+        )
+    )
 
     // The Style bottom tab. Theme and accent moved here from Look & feel; the
     // legacy drawer/folder background color rows are superseded by the
@@ -1930,69 +1994,43 @@ object SettingsCatalogue {
     ): SettingsSection {
         val rows = Rows(context, viewModel, actions)
         return SettingsSection(
-        R.string.style_tab,
-        listOf(
-            // A grouped page: Theme and Surfaces cards, each under its label.
-            SettingItem.Header(R.string.style_group_theme),
-            SettingItem.Row(
-                R.string.color_palette,
-                subtitle = {
-                    context.getString(EnumLabels.of(it.paletteSource))
-                },
-                onClick = actions.openPaletteDialog,
-                look = SettingItem.RowLook(R.drawable.ic_tab_style)
-            ),
-            rows.choice(
-                R.string.theme_mode, ThemeMode.entries,
-                { it.themeMode }, { EnumLabels.of(it) }
-            ) { viewModel.set(Pref.themeMode, it) }.withLook(SettingItem.RowLook(R.drawable.ic_style_theme)),
-            rows.choice(
-                R.string.dark_style, com.supernova.launcher.ui.theme.DarkStyle.entries,
-                { it.darkStyle }, { EnumLabels.of(it) }
-            ) { viewModel.set(Pref.darkStyle, it) }.withLook(SettingItem.RowLook(R.drawable.ic_style_dark)),
-            rows.choice(
-                R.string.light_style, com.supernova.launcher.ui.theme.LightStyle.entries,
-                { it.lightStyle }, { EnumLabels.of(it) }
-            ) { viewModel.set(Pref.lightStyle, it) }.withLook(SettingItem.RowLook(R.drawable.ic_style_light)),
-            SettingItem.Row(
-                R.string.theme_schedule_times,
-                subtitle = {
-                    context.getString(
-                        R.string.theme_schedule_range,
-                        formatMinute(it.themeScheduleStart), formatMinute(it.themeScheduleEnd)
-                    )
-                },
-                onClick = actions.editThemeSchedule,
-                look = SettingItem.RowLook(R.drawable.ic_style_schedule)
-            ).hiddenWhen { dependsOn(R.string.theme_mode, it.themeMode != ThemeMode.SCHEDULE) },
-            accentRow(context, viewModel, actions),
-            SettingItem.Header(R.string.style_group_surfaces),
-            SettingItem.Row(
-                R.string.style_group_surfaces_dark_default,
-                subtitle = { context.getString(R.string.style_surfaces_sub_summary) },
-                onClick = { actions.openSection(R.string.style_group_surfaces_dark_default) },
-                look = SettingItem.RowLook(R.drawable.ic_style_dark)
-            ),
-            SettingItem.Row(
-                R.string.style_group_surfaces_dark_amoled,
-                subtitle = { context.getString(R.string.style_surfaces_sub_summary) },
-                onClick = { actions.openSection(R.string.style_group_surfaces_dark_amoled) },
-                look = SettingItem.RowLook(R.drawable.ic_style_dark)
-            ),
-            SettingItem.Row(
-                R.string.style_group_surfaces_light_default,
-                subtitle = { context.getString(R.string.style_surfaces_sub_summary) },
-                onClick = { actions.openSection(R.string.style_group_surfaces_light_default) },
-                look = SettingItem.RowLook(R.drawable.ic_style_light)
-            ),
-            SettingItem.Row(
-                R.string.style_group_surfaces_light_frosted,
-                subtitle = { context.getString(R.string.style_surfaces_sub_summary) },
-                onClick = { actions.openSection(R.string.style_group_surfaces_light_frosted) },
-                look = SettingItem.RowLook(R.drawable.ic_style_light)
-            )
+            R.string.style_tab,
+            listOf(
+                // A grouped page: Theme and Surfaces cards, each under its label.
+                SettingItem.Header(R.string.style_group_theme),
+                SettingItem.Row(
+                    R.string.color_palette,
+                    subtitle = { context.getString(EnumLabels.of(it.paletteSource)) },
+                    onClick = actions.openPaletteDialog,
+                    look = SettingItem.RowLook(R.drawable.ic_tab_style)
+                ),
+                rows.choice(
+                    R.string.theme_mode, ThemeMode.entries,
+                    { it.themeMode }, { EnumLabels.of(it) }
+                ) { viewModel.set(Pref.themeMode, it) }.withLook(SettingItem.RowLook(R.drawable.ic_style_theme)),
+                rows.choice(
+                    R.string.dark_style, com.supernova.launcher.ui.theme.DarkStyle.entries,
+                    { it.darkStyle }, { EnumLabels.of(it) }
+                ) { viewModel.set(Pref.darkStyle, it) }.withLook(SettingItem.RowLook(R.drawable.ic_style_dark)),
+                rows.choice(
+                    R.string.light_style, com.supernova.launcher.ui.theme.LightStyle.entries,
+                    { it.lightStyle }, { EnumLabels.of(it) }
+                ) { viewModel.set(Pref.lightStyle, it) }.withLook(SettingItem.RowLook(R.drawable.ic_style_light)),
+                SettingItem.Row(
+                    R.string.theme_schedule_times,
+                    subtitle = {
+                        context.getString(
+                            R.string.theme_schedule_range,
+                            formatMinute(it.themeScheduleStart), formatMinute(it.themeScheduleEnd)
+                        )
+                    },
+                    onClick = actions.editThemeSchedule,
+                    look = SettingItem.RowLook(R.drawable.ic_style_schedule)
+                ).hiddenWhen { dependsOn(R.string.theme_mode, it.themeMode != ThemeMode.SCHEDULE) },
+                accentRow(context, viewModel, actions),
+                SettingItem.Header(R.string.style_group_surfaces)
+            ) + surfaceGroupRows(context, actions)
         )
-    )
     }
 
     // A row saying what a setting still needs (a permission, a service):
@@ -2010,9 +2048,6 @@ object SettingsCatalogue {
         look = SettingItem.RowLook(icon = R.drawable.ic_settings_warn, warn = true),
         visibleIf = visibleIf
     ).apply { describedBy(summary) }
-
-    private fun formatMinute(minute: Int): String =
-        "%d:%02d".format(minute / 60, minute % 60)
 
     // The per-context label block (B3/B4): a customize toggle plus the four
     // override fields, spliced into the Dock / App drawer / Folders sections.
@@ -2097,20 +2132,26 @@ object SettingsCatalogue {
         return parts.joinToString(" \u00b7 ")
     }
 
-    // An unnamed card's row: its featured app or widget, else "Card".
-    private fun cardFallbackName(context: Context, card: com.supernova.launcher.feed.FeedCard): String {
-        val widgetId = card.appWidgetId
-        val label = if (com.supernova.launcher.feed.CardItems.isWidget(card) && widgetId != null) {
-            runCatching {
-                android.appwidget.AppWidgetManager.getInstance(context).getAppWidgetInfo(widgetId)
-                    ?.loadLabel(context.packageManager)
-            }.getOrNull()
-        } else {
-            null
-        }
-        return label ?: context.getString(R.string.card_untitled)
-    }
 }
+
+// An unnamed card's row: its featured app or widget, else "Card".
+private fun cardFallbackName(context: Context, card: com.supernova.launcher.feed.FeedCard): String {
+    val widgetId = card.appWidgetId
+    val label = if (com.supernova.launcher.feed.CardItems.isWidget(card) && widgetId != null) {
+        runCatching {
+            android.appwidget.AppWidgetManager.getInstance(context).getAppWidgetInfo(widgetId)
+                ?.loadLabel(context.packageManager)
+        }.getOrNull()
+    } else {
+        null
+    }
+    return label ?: context.getString(R.string.card_untitled)
+}
+
+private const val MINUTES_PER_HOUR = 60
+
+private fun formatMinute(minute: Int): String =
+    "%d:%02d".format(minute / MINUTES_PER_HOUR, minute % MINUTES_PER_HOUR)
 
 // What brings back a row its page hides, for the settings search's hint
 // (SettingItem.hiddenWhen, #133): the setting, which way it needs to go, and

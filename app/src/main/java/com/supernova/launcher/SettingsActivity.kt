@@ -456,9 +456,9 @@ class SettingsActivity : AppCompatActivity() {
                     .show()
             },
             openPaletteDialog = ::showPaletteSourcePicker,
-            openStylePicker = { surfaceId, variant ->
+            openStylePicker = { surfaceId ->
                 stylePickerOpen = true
-                StylePickerSheet.show(this, viewModel, surfaceId, variant) {
+                StylePickerSheet.show(this, viewModel, surfaceId) {
                     stylePickerOpen = false
                     recreateForAccent(viewModel.state.value.prefs)
                 }
@@ -537,7 +537,15 @@ class SettingsActivity : AppCompatActivity() {
                 )
             },
             openSection = { title -> navigateTo(title, 0) }
-        )
+        ).apply {
+            openStylePickerWithVariant = { surfaceId, variant ->
+                stylePickerOpen = true
+                StylePickerSheet.showVariant(this@SettingsActivity, viewModel, surfaceId, variant) {
+                    stylePickerOpen = false
+                    recreateForAccent(viewModel.state.value.prefs)
+                }
+            }
+        }
         sections = SettingsCatalogue.sections(context = this, viewModel = viewModel, actions = actions)
         styleSection = SettingsCatalogue.styleSection(context = this, viewModel = viewModel, actions = actions)
         renderedFeedCards = viewModel.state.value.model.feedCards

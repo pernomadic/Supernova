@@ -19,6 +19,8 @@ import com.supernova.launcher.ui.dp
 import com.supernova.launcher.ui.textSizeOf
 import com.supernova.launcher.ui.theme.AccentColor
 import com.supernova.launcher.ui.theme.ColorSpec
+import com.supernova.launcher.ui.theme.DarkStyle
+import com.supernova.launcher.ui.theme.LightStyle
 import com.supernova.launcher.ui.theme.PaletteFactory
 import com.supernova.launcher.ui.theme.PaletteRole
 import com.supernova.launcher.ui.theme.PaletteSourceMode
@@ -27,6 +29,8 @@ import com.supernova.launcher.ui.theme.Styles
 import com.supernova.launcher.ui.theme.SurfaceId
 import com.supernova.launcher.ui.theme.SurfaceShapes
 import com.supernova.launcher.ui.theme.ThemeEngine
+import com.supernova.launcher.ui.theme.ThemeMode
+import com.supernova.launcher.ui.theme.ThemeStyleVariant
 import com.supernova.launcher.ui.theme.ToneRamp
 
 // Per-surface style editor: Surface/Text/Accent color slots picked from the
@@ -62,13 +66,21 @@ object StylePickerSheet {
         return com.supernova.launcher.data.IconGlass.fromName(glass) != com.supernova.launcher.data.IconGlass.OFF
     }
 
-    fun show(
+    private var pendingVariant: ThemeStyleVariant? = null
+
+    fun showVariant(
         context: Context,
         viewModel: LauncherViewModel,
         surfaceId: SurfaceId,
-        variant: com.supernova.launcher.ui.theme.ThemeStyleVariant? = null,
+        variant: ThemeStyleVariant?,
         onDismiss: () -> Unit = {}
     ) {
+        pendingVariant = variant
+        show(context, viewModel, surfaceId, onDismiss)
+    }
+
+    fun show(context: Context, viewModel: LauncherViewModel, surfaceId: SurfaceId, onDismiss: () -> Unit = {}) {
+        val variant = pendingVariant.also { pendingVariant = null }
         val binding = SheetStylePickerBinding.inflate(LayoutInflater.from(context))
         val dialog = com.supernova.launcher.ui.Sheets.open(context)
         dialog.setContentView(binding.root)
@@ -85,14 +97,18 @@ object StylePickerSheet {
         var slot = Slot.SURFACE
 
         val variantLabel = when (variant) {
-            com.supernova.launcher.ui.theme.ThemeStyleVariant.DARK_DEFAULT -> context.getString(R.string.style_group_surfaces_dark_default)
-            com.supernova.launcher.ui.theme.ThemeStyleVariant.DARK_AMOLED -> context.getString(R.string.style_group_surfaces_dark_amoled)
-            com.supernova.launcher.ui.theme.ThemeStyleVariant.LIGHT_DEFAULT -> context.getString(R.string.style_group_surfaces_light_default)
-            com.supernova.launcher.ui.theme.ThemeStyleVariant.LIGHT_FROSTED -> context.getString(R.string.style_group_surfaces_light_frosted)
+            ThemeStyleVariant.DARK_DEFAULT -> context.getString(R.string.style_group_surfaces_dark_default)
+            ThemeStyleVariant.DARK_AMOLED -> context.getString(R.string.style_group_surfaces_dark_amoled)
+            ThemeStyleVariant.LIGHT_DEFAULT -> context.getString(R.string.style_group_surfaces_light_default)
+            ThemeStyleVariant.LIGHT_FROSTED -> context.getString(R.string.style_group_surfaces_light_frosted)
             null -> null
         }
         if (variantLabel != null) {
-            binding.styleTitle.text = "${context.getString(EnumLabels.of(surfaceId))} ($variantLabel)"
+            binding.styleTitle.text = context.getString(
+                R.string.style_title_with_variant,
+                context.getString(EnumLabels.of(surfaceId)),
+                variantLabel
+            )
         } else {
             binding.styleTitle.setText(EnumLabels.of(surfaceId))
         }
@@ -141,14 +157,14 @@ object StylePickerSheet {
                 prefs
             }
             val previewPrefs = when (variant) {
-                com.supernova.launcher.ui.theme.ThemeStyleVariant.DARK_DEFAULT ->
-                    base.copy(themeMode = com.supernova.launcher.ui.theme.ThemeMode.DARK, darkStyle = com.supernova.launcher.ui.theme.DarkStyle.DEFAULT)
-                com.supernova.launcher.ui.theme.ThemeStyleVariant.DARK_AMOLED ->
-                    base.copy(themeMode = com.supernova.launcher.ui.theme.ThemeMode.DARK, darkStyle = com.supernova.launcher.ui.theme.DarkStyle.AMOLED)
-                com.supernova.launcher.ui.theme.ThemeStyleVariant.LIGHT_DEFAULT ->
-                    base.copy(themeMode = com.supernova.launcher.ui.theme.ThemeMode.LIGHT, lightStyle = com.supernova.launcher.ui.theme.LightStyle.DEFAULT)
-                com.supernova.launcher.ui.theme.ThemeStyleVariant.LIGHT_FROSTED ->
-                    base.copy(themeMode = com.supernova.launcher.ui.theme.ThemeMode.LIGHT, lightStyle = com.supernova.launcher.ui.theme.LightStyle.FROSTED)
+                ThemeStyleVariant.DARK_DEFAULT ->
+                    base.copy(themeMode = ThemeMode.DARK, darkStyle = DarkStyle.DEFAULT)
+                ThemeStyleVariant.DARK_AMOLED ->
+                    base.copy(themeMode = ThemeMode.DARK, darkStyle = DarkStyle.AMOLED)
+                ThemeStyleVariant.LIGHT_DEFAULT ->
+                    base.copy(themeMode = ThemeMode.LIGHT, lightStyle = LightStyle.DEFAULT)
+                ThemeStyleVariant.LIGHT_FROSTED ->
+                    base.copy(themeMode = ThemeMode.LIGHT, lightStyle = LightStyle.FROSTED)
                 null -> base
             }
             return Styles.resolve(

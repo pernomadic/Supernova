@@ -19,8 +19,11 @@ import com.supernova.launcher.ui.LabelFont
 import com.supernova.launcher.ui.LaunchAnimation
 import com.supernova.launcher.ui.PopupMenuStyle
 import com.supernova.launcher.ui.ScrollEffect
+import com.supernova.launcher.ui.SearchBarTapAction
 import com.supernova.launcher.ui.StatusBarIcons
 import com.supernova.launcher.ui.theme.AccentColor
+import com.supernova.launcher.ui.theme.DarkStyle
+import com.supernova.launcher.ui.theme.LightStyle
 import com.supernova.launcher.ui.theme.PaletteSourceMode
 import com.supernova.launcher.ui.theme.ThemeMode
 import kotlinx.serialization.Serializable
@@ -383,11 +386,11 @@ data class LauncherPrefs(
     // Badge folder icons with the summed unread count of their members.
     val folderBadges: Boolean = false,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
-    val darkStyle: com.supernova.launcher.ui.theme.DarkStyle = com.supernova.launcher.ui.theme.DarkStyle.DEFAULT,
-    val lightStyle: com.supernova.launcher.ui.theme.LightStyle = com.supernova.launcher.ui.theme.LightStyle.DEFAULT,
+    val darkStyle: DarkStyle = DarkStyle.DEFAULT,
+    val lightStyle: LightStyle = LightStyle.DEFAULT,
     val glassFollowsTheme: Boolean = true,
     val homeScreenLayout: HomeScreenLayout = HomeScreenLayout.HOME_AND_APPS,
-    val searchBarTapAction: com.supernova.launcher.ui.SearchBarTapAction = com.supernova.launcher.ui.SearchBarTapAction.DEFAULT,
+    val searchBarTapAction: SearchBarTapAction = SearchBarTapAction.DEFAULT,
     val searchBarColoredIcons: Boolean = false,
     val unlockEntranceAnimation: Boolean = false,
     // SCHEDULE mode's dark window, minutes since midnight; end < start wraps

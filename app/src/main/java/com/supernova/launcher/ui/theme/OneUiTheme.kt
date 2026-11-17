@@ -48,12 +48,27 @@ object OneUiTheme {
     const val AMOLED_POPUP = 0xFF0D0D0D.toInt()
     const val AMOLED_FOLDER_PLATE = 0x66000000
 
-    // Frosted light tones
+    // Folders, search bars and surfaces
     const val FROSTED_WHITE = 0xFFFFFFFF.toInt()
     const val FROSTED_SURFACE = 0xF2FFFFFF.toInt()
     const val FROSTED_CARD = 0xE6F8F9FA.toInt()
     const val FROSTED_BAR = 0xCCFFFFFF.toInt()
     const val FROSTED_FOLDER_PLATE = 0x80FFFFFF.toInt()
+
+    private const val DARK_DEFAULT_SURFACE = 0xFF1E2735.toInt()
+    private const val DARK_DEFAULT_CARD = 0xFF1A2230.toInt()
+    private const val DARK_DEFAULT_SETTINGS = 0xFF0D1117.toInt()
+    private const val DARK_DEFAULT_DRAWER_SEARCH_BAR = 0x24FFFFFF
+
+    private const val LIGHT_FROSTED_SETTINGS = 0xFFF5F7FA.toInt()
+    private const val LIGHT_FROSTED_DOCK = 0xCCFFFFFF.toInt()
+
+    private const val LIGHT_DEFAULT_SETTINGS = 0xFFF4F5F7.toInt()
+
+    private const val PLATE_AMOLED = 0x99000000.toInt()
+    private const val PLATE_DARK_DEFAULT = 0x66000000.toInt()
+    private const val PLATE_LIGHT_FROSTED = 0x99FFFFFF.toInt()
+    private const val PLATE_LIGHT_DEFAULT = 0x80FFFFFF.toInt()
 
     fun activeVariant(context: Context, prefs: LauncherPrefs): ThemeStyleVariant {
         val night = ThemeEngine.isNight(context, prefs)
@@ -65,50 +80,51 @@ object OneUiTheme {
         }
     }
 
+    private fun surfaceForDarkAmoled(surfaceId: SurfaceId): Int = when (surfaceId) {
+        SurfaceId.DRAWER, SurfaceId.SETTINGS, SurfaceId.HOME, SurfaceId.FOLDER, SurfaceId.DOCK -> AMOLED_BLACK
+        SurfaceId.CARDS, SurfaceId.POPUP -> AMOLED_CARD
+        SurfaceId.SEARCH_BAR, SurfaceId.DRAWER_SEARCH_BAR -> AMOLED_BAR
+    }
+
+    private fun surfaceForDarkDefault(surfaceId: SurfaceId, fallbackColor: Int): Int = when (surfaceId) {
+        SurfaceId.FOLDER, SurfaceId.DRAWER -> DARK_DEFAULT_SURFACE
+        SurfaceId.CARDS, SurfaceId.POPUP, SurfaceId.SEARCH_BAR -> DARK_DEFAULT_CARD
+        SurfaceId.DRAWER_SEARCH_BAR -> DARK_DEFAULT_DRAWER_SEARCH_BAR
+        SurfaceId.SETTINGS -> DARK_DEFAULT_SETTINGS
+        else -> fallbackColor
+    }
+
+    private fun surfaceForLightFrosted(surfaceId: SurfaceId, fallbackColor: Int): Int = when (surfaceId) {
+        SurfaceId.FOLDER, SurfaceId.DRAWER -> FROSTED_SURFACE
+        SurfaceId.CARDS, SurfaceId.POPUP -> FROSTED_CARD
+        SurfaceId.SEARCH_BAR, SurfaceId.DRAWER_SEARCH_BAR -> FROSTED_BAR
+        SurfaceId.SETTINGS -> LIGHT_FROSTED_SETTINGS
+        SurfaceId.DOCK -> LIGHT_FROSTED_DOCK
+        else -> fallbackColor
+    }
+
+    private fun surfaceForLightDefault(surfaceId: SurfaceId, fallbackColor: Int): Int = when (surfaceId) {
+        SurfaceId.FOLDER, SurfaceId.DRAWER, SurfaceId.CARDS,
+        SurfaceId.POPUP, SurfaceId.SEARCH_BAR, SurfaceId.DRAWER_SEARCH_BAR -> FROSTED_WHITE
+        SurfaceId.SETTINGS -> LIGHT_DEFAULT_SETTINGS
+        else -> fallbackColor
+    }
+
     fun defaultSurfaceColor(
         variant: ThemeStyleVariant,
         surfaceId: SurfaceId,
         fallbackColor: Int
     ): Int = when (variant) {
-        ThemeStyleVariant.DARK_AMOLED -> when (surfaceId) {
-            SurfaceId.DRAWER, SurfaceId.SETTINGS, SurfaceId.HOME -> AMOLED_BLACK
-            SurfaceId.FOLDER -> AMOLED_BLACK
-            SurfaceId.CARDS, SurfaceId.POPUP -> AMOLED_CARD
-            SurfaceId.SEARCH_BAR, SurfaceId.DRAWER_SEARCH_BAR -> AMOLED_BAR
-            SurfaceId.DOCK -> AMOLED_BLACK
-        }
-        ThemeStyleVariant.DARK_DEFAULT -> when (surfaceId) {
-            SurfaceId.FOLDER -> 0xFF1E2735.toInt()
-            SurfaceId.DRAWER -> 0xFF1E2735.toInt()
-            SurfaceId.CARDS, SurfaceId.POPUP -> 0xFF1A2230.toInt()
-            SurfaceId.SEARCH_BAR -> 0xFF1A2230.toInt()
-            SurfaceId.DRAWER_SEARCH_BAR -> 0x24FFFFFF
-            SurfaceId.SETTINGS -> 0xFF0D1117.toInt()
-            else -> fallbackColor
-        }
-        ThemeStyleVariant.LIGHT_FROSTED -> when (surfaceId) {
-            SurfaceId.FOLDER -> FROSTED_SURFACE
-            SurfaceId.CARDS, SurfaceId.POPUP -> FROSTED_CARD
-            SurfaceId.SEARCH_BAR, SurfaceId.DRAWER_SEARCH_BAR -> FROSTED_BAR
-            SurfaceId.DRAWER -> FROSTED_SURFACE
-            SurfaceId.SETTINGS -> 0xFFF5F7FA.toInt()
-            SurfaceId.DOCK -> 0xCCFFFFFF.toInt()
-            else -> fallbackColor
-        }
-        ThemeStyleVariant.LIGHT_DEFAULT -> when (surfaceId) {
-            SurfaceId.FOLDER -> 0xFFFFFFFF.toInt()
-            SurfaceId.DRAWER -> 0xFFFFFFFF.toInt()
-            SurfaceId.CARDS, SurfaceId.POPUP -> 0xFFFFFFFF.toInt()
-            SurfaceId.SEARCH_BAR, SurfaceId.DRAWER_SEARCH_BAR -> 0xFFFFFFFF.toInt()
-            SurfaceId.SETTINGS -> 0xFFF4F5F7.toInt()
-            else -> fallbackColor
-        }
+        ThemeStyleVariant.DARK_AMOLED -> surfaceForDarkAmoled(surfaceId)
+        ThemeStyleVariant.DARK_DEFAULT -> surfaceForDarkDefault(surfaceId, fallbackColor)
+        ThemeStyleVariant.LIGHT_FROSTED -> surfaceForLightFrosted(surfaceId, fallbackColor)
+        ThemeStyleVariant.LIGHT_DEFAULT -> surfaceForLightDefault(surfaceId, fallbackColor)
     }
 
     fun defaultFolderPlateColor(variant: ThemeStyleVariant): Int = when (variant) {
-        ThemeStyleVariant.DARK_AMOLED -> 0x99000000.toInt()
-        ThemeStyleVariant.DARK_DEFAULT -> 0x66000000.toInt()
-        ThemeStyleVariant.LIGHT_FROSTED -> 0x99FFFFFF.toInt()
-        ThemeStyleVariant.LIGHT_DEFAULT -> 0x80FFFFFF.toInt()
+        ThemeStyleVariant.DARK_AMOLED -> PLATE_AMOLED
+        ThemeStyleVariant.DARK_DEFAULT -> PLATE_DARK_DEFAULT
+        ThemeStyleVariant.LIGHT_FROSTED -> PLATE_LIGHT_FROSTED
+        ThemeStyleVariant.LIGHT_DEFAULT -> PLATE_LIGHT_DEFAULT
     }
 }

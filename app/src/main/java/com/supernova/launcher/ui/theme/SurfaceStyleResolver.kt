@@ -53,7 +53,7 @@ object Styles {
     private var cachedPalette: TonalPalette? = null
 
     const val DOCK_BASE_RGB = 0x1A2230
-    private const val DRAWER_FIELD_ALPHA = 0x24
+    const val DRAWER_FIELD_ALPHA = 0x24
     // Below this opacity (above 70% transparency) the drawer's labels and
     // text default to the wallpaper's light ones.
     const val SEE_THROUGH_ALPHA = 0.3f
@@ -71,25 +71,6 @@ object Styles {
     fun drawerText(surfaceBase: Int, alpha: Float, onWallpaper: Int): Int =
         if (isSeeThrough(alpha)) onWallpaper else Contrast.readableOn(surfaceBase, DARK_TEXT, onWallpaper)
 
-    // A surface's default text from its color and effective alpha (`auto`),
-    // when it has one and the style sets no text color; null otherwise. It
-    // keeps the style's minimum contrast from the surface, except when it is
-    // read on the wallpaper the surface barely covers.
-    private fun autoText(
-        styled: Int?,
-        surfaceBase: Int,
-        alpha: Float?,
-        auto: ((surfaceBase: Int, alpha: Float) -> Int)?,
-        minContrast: Int?
-    ): Int? {
-        if (styled != null || auto == null) return null
-        val effective = alpha ?: (android.graphics.Color.alpha(surfaceBase) / MAX_ALPHA)
-        val text = auto(surfaceBase, effective)
-        return if (isSeeThrough(effective)) text else Contrast.ensure(text, surfaceBase, minContrast)
-    }
-
-    private const val MAX_ALPHA = 255f
-
     @Synchronized
     fun resolve(context: Context, prefs: LauncherPrefs): ResolvedStyles {
         val variant = OneUiTheme.activeVariant(context, prefs)
@@ -105,126 +86,23 @@ object Styles {
         val palette = paletteFor(context, prefs, key)
         val config = StyleConfig.decode(prefs.styleConfig)
         val accent = ThemeEngine.accentColor(context, prefs.accentColor)
-        val darkBg = 0xFF0D1117.toInt()
-        val darkSurface = 0xFF1A2230.toInt()
-        val lightText = 0xFF11161D.toInt()
-        val lightSurface = 0xFFFFFFFF.toInt()
-        val themeText = if (night) 0xFFFFFFFF.toInt() else lightText
+        val themeText = if (night) 0xFFFFFFFF.toInt() else 0xFF11161D.toInt()
         val onWallpaper = context.getColor(R.color.onWallpaper)
-        val themeSurface = if (night) {
-            if (variant == ThemeStyleVariant.DARK_AMOLED) OneUiTheme.AMOLED_BLACK else darkSurface
-        } else {
-            lightSurface
-        }
+        val themeSurface = computeThemeSurface(night, variant)
 
-        fun resolved(
-            id: SurfaceId,
-            defaultSurface: Int,
-            defaultText: Int,
-            // null keeps defaultSurface's own alpha channel.
-            defaultAlpha: Float?,
-            defaultAccent: Int = accent,
-            // The default text for the surface's color and effective alpha,
-            // in place of defaultText; null keeps defaultText.
-            textFor: ((surfaceBase: Int, alpha: Float) -> Int)? = null
-        ): ResolvedSurface {
-            val style = config.styleFor(id, variant)
-            val fallbackWithVariant = OneUiTheme.defaultSurfaceColor(variant, id, defaultSurface)
-            val surfaceBase = colorFor(style.surface, palette) ?: fallbackWithVariant
-            val alpha = style.alpha ?: defaultAlpha
-            val surface = if (alpha != null) {
-                ((alpha.coerceIn(0f, 1f) * 255).toInt() shl 24) or (surfaceBase and 0x00FFFFFF)
-            } else {
-                surfaceBase
-            }
-            val styledText = colorFor(style.text, palette)
-            return ResolvedSurface(
-                surface = surface,
-                text = autoText(styledText, surfaceBase, alpha, textFor, style.minContrast)
-                    ?: Contrast.ensure(styledText ?: defaultText, surfaceBase, style.minContrast),
-                accent = colorFor(style.accent, palette) ?: defaultAccent,
-                // Only the folder window has a radius, on the Folders page. One
-                // an older Style tab stored for another surface goes unread.
-                cornerRadiiDp = style.cornerRadii?.takeIf { id == SurfaceId.FOLDER }?.let { radii ->
-                    FloatArray(4) { radii.getOrElse(it) { 0f } }
-                }
-            )
-        }
-
-        val drawerLegacy = LabelStyler.parseColor(
-            prefs.drawerBgColor,
-            if (night) (if (variant == ThemeStyleVariant.DARK_AMOLED) OneUiTheme.AMOLED_BLACK else 0xFF1E2735.toInt())
-            else lightSurface
-        )
-        // The FOLDER surface colors the folder *window*, so its default is the
-        // opaque theme surface; the translucent preview-plate default lives in
-        // the plate drawable itself (folderMatchWindowColor pulls this color in
-        // explicitly).
+        val drawerLegacy = LabelStyler.parseColor(prefs.drawerBgColor, computeDrawerDefault(night, variant))
         val folderLegacy = LabelStyler.parseColor(
             prefs.folderBgColor,
-            if (night) themeSurface
-            else (if (variant == ThemeStyleVariant.LIGHT_FROSTED) OneUiTheme.FROSTED_SURFACE else lightSurface)
+            computeFolderDefault(night, variant, themeSurface)
         )
 
-        val drawer = resolved(
-            SurfaceId.DRAWER, drawerLegacy, themeText, prefs.drawerBgOpacity,
-            textFor = { base, alpha -> drawerText(base, alpha, onWallpaper) }
-        )
-
-        val popup = resolved(SurfaceId.POPUP, themeSurface, themeText, null)
-        val cardsText = cardText(config, onWallpaper, variant)
-        val cards = resolved(SurfaceId.CARDS, popup.surface, popup.text, null, popup.accent, cardsText)
-
+        val ctx = SurfaceContext(variant, palette, accent, themeText, onWallpaper, prefs)
         val styles = ResolvedStyles(
-            mapOf(
-                SurfaceId.DRAWER to drawer,
-                // Unstyled, the drawer's field is a tint of the drawer's text.
-                SurfaceId.DRAWER_SEARCH_BAR to resolved(
-                    SurfaceId.DRAWER_SEARCH_BAR,
-                    (DRAWER_FIELD_ALPHA shl 24) or (drawer.text and 0x00FFFFFF),
-                    drawer.text, null, drawer.accent
-                ),
-                SurfaceId.DOCK to resolved(
-                    SurfaceId.DOCK, (0xFF shl 24) or DOCK_BASE_RGB, onWallpaper, prefs.dockBgOpacity
-                ),
-                SurfaceId.FOLDER to resolved(
-                    SurfaceId.FOLDER, folderLegacy, themeText, null
-                ),
-                SurfaceId.POPUP to popup,
-                SurfaceId.CARDS to cards,
-                SurfaceId.SEARCH_BAR to resolved(
-                    SurfaceId.SEARCH_BAR, themeSurface, themeText, null
-                ),
-                SurfaceId.SETTINGS to resolved(
-                    SurfaceId.SETTINGS,
-                    if (night) (if (variant == ThemeStyleVariant.DARK_AMOLED) OneUiTheme.AMOLED_BLACK else darkBg)
-                    else 0xFFF4F5F7.toInt(),
-                    themeText, null
-                ),
-                SurfaceId.HOME to resolved(
-                    SurfaceId.HOME, android.graphics.Color.TRANSPARENT, onWallpaper, null
-                )
-            )
+            buildSurfaceMap(ctx, drawerLegacy, folderLegacy, themeSurface)
         )
         cachedKey = key
         cachedStyles = styles
         return styles
-    }
-
-    // Cards wear the popup's colours until styled themselves. Once their
-    // color or opacity is set, the text follows the plate (dark on a light
-    // one), and the wallpaper's once the plate barely covers it.
-    private fun cardText(config: StyleConfig, onWallpaper: Int, variant: ThemeStyleVariant? = null): ((Int, Float) -> Int)? =
-        if (config.styleFor(SurfaceId.CARDS, variant).let { it.surface.isDefault && it.alpha == null }) {
-            null
-        } else {
-            { base, alpha -> drawerText(base, alpha, onWallpaper) }
-        }
-
-    private fun colorFor(spec: ColorSpec, palette: TonalPalette): Int? = when {
-        spec.fixed != null -> runCatching { android.graphics.Color.parseColor(spec.fixed) }.getOrNull()
-        spec.role != null && spec.tone != null -> palette.tone(spec.role, spec.tone)
-        else -> null
     }
 
     private fun paletteFor(context: Context, prefs: LauncherPrefs, key: Key): TonalPalette {
@@ -238,4 +116,146 @@ object Styles {
         cachedPalette = palette
         return palette
     }
+}
+
+private const val MAX_ALPHA = 255f
+private const val COLOR_MASK = 0x00FFFFFF
+private const val SHIFT_ALPHA = 24
+private const val MAX_COLOR_BYTE = 255
+private const val OPAQUE_BYTE = 0xFF
+private const val CORNER_COUNT = 4
+
+private class SurfaceContext(
+    val variant: ThemeStyleVariant,
+    val palette: TonalPalette,
+    val accent: Int,
+    val themeText: Int,
+    val onWallpaper: Int,
+    val prefs: LauncherPrefs
+) {
+    val config: StyleConfig = StyleConfig.decode(prefs.styleConfig)
+}
+
+private fun buildSurfaceMap(
+    ctx: SurfaceContext,
+    drawerLegacy: Int,
+    folderLegacy: Int,
+    themeSurface: Int
+): Map<SurfaceId, ResolvedSurface> {
+    val drawer = resolveSurface(
+        SurfaceId.DRAWER, drawerLegacy, ctx.prefs.drawerBgOpacity, ctx,
+        textFor = { base, alpha -> Styles.drawerText(base, alpha, ctx.onWallpaper) }
+    )
+    val popup = resolveSurface(SurfaceId.POPUP, themeSurface, null, ctx)
+    val cards = resolveSurface(
+        SurfaceId.CARDS, popup.surface, null, ctx,
+        cardText(ctx.config, ctx.onWallpaper, ctx.variant)
+    )
+    return mapOf(
+        SurfaceId.DRAWER to drawer,
+        SurfaceId.DRAWER_SEARCH_BAR to resolveSurface(
+            SurfaceId.DRAWER_SEARCH_BAR,
+            (Styles.DRAWER_FIELD_ALPHA shl SHIFT_ALPHA) or (drawer.text and COLOR_MASK),
+            null, ctx
+        ),
+        SurfaceId.DOCK to resolveSurface(
+            SurfaceId.DOCK, (OPAQUE_BYTE shl SHIFT_ALPHA) or Styles.DOCK_BASE_RGB, ctx.prefs.dockBgOpacity, ctx
+        ),
+        SurfaceId.FOLDER to resolveSurface(
+            SurfaceId.FOLDER, folderLegacy, null, ctx
+        ),
+        SurfaceId.POPUP to popup,
+        SurfaceId.CARDS to cards,
+        SurfaceId.SEARCH_BAR to resolveSurface(
+            SurfaceId.SEARCH_BAR, themeSurface, null, ctx
+        ),
+        SurfaceId.SETTINGS to resolveSurface(
+            SurfaceId.SETTINGS, computeSettingsDefault(ctx.variant.isDark, ctx.variant), null, ctx
+        ),
+        SurfaceId.HOME to resolveSurface(
+            SurfaceId.HOME, android.graphics.Color.TRANSPARENT, null, ctx
+        )
+    )
+}
+
+private fun computeThemeSurface(night: Boolean, variant: ThemeStyleVariant): Int = when {
+    night && variant == ThemeStyleVariant.DARK_AMOLED -> OneUiTheme.AMOLED_BLACK
+    night -> 0xFF1A2230.toInt()
+    else -> 0xFFFFFFFF.toInt()
+}
+
+private fun computeDrawerDefault(night: Boolean, variant: ThemeStyleVariant): Int = when {
+    night && variant == ThemeStyleVariant.DARK_AMOLED -> OneUiTheme.AMOLED_BLACK
+    night -> 0xFF1E2735.toInt()
+    else -> 0xFFFFFFFF.toInt()
+}
+
+private fun computeFolderDefault(night: Boolean, variant: ThemeStyleVariant, themeSurface: Int): Int = when {
+    night -> themeSurface
+    variant == ThemeStyleVariant.LIGHT_FROSTED -> OneUiTheme.FROSTED_SURFACE
+    else -> 0xFFFFFFFF.toInt()
+}
+
+private fun computeSettingsDefault(night: Boolean, variant: ThemeStyleVariant): Int = when {
+    night && variant == ThemeStyleVariant.DARK_AMOLED -> OneUiTheme.AMOLED_BLACK
+    night -> 0xFF0D1117.toInt()
+    else -> 0xFFF4F5F7.toInt()
+}
+
+private fun autoText(
+    styled: Int?,
+    surfaceBase: Int,
+    alpha: Float?,
+    auto: ((surfaceBase: Int, alpha: Float) -> Int)?,
+    minContrast: Int?
+): Int? {
+    if (styled != null || auto == null) return null
+    val effective = alpha ?: (android.graphics.Color.alpha(surfaceBase) / MAX_ALPHA)
+    val text = auto(surfaceBase, effective)
+    return if (Styles.isSeeThrough(effective)) text else Contrast.ensure(text, surfaceBase, minContrast)
+}
+
+private fun resolveSurface(
+    id: SurfaceId,
+    defaultSurface: Int,
+    defaultAlpha: Float?,
+    ctx: SurfaceContext,
+    textFor: ((surfaceBase: Int, alpha: Float) -> Int)? = null
+): ResolvedSurface {
+    val style = ctx.config.styleFor(id, ctx.variant)
+    val fallbackWithVariant = OneUiTheme.defaultSurfaceColor(ctx.variant, id, defaultSurface)
+    val surfaceBase = colorFor(style.surface, ctx.palette) ?: fallbackWithVariant
+    val alpha = style.alpha ?: defaultAlpha
+    val surface = if (alpha != null) {
+        ((alpha.coerceIn(0f, 1f) * MAX_COLOR_BYTE).toInt() shl SHIFT_ALPHA) or (surfaceBase and COLOR_MASK)
+    } else {
+        surfaceBase
+    }
+    val styledText = colorFor(style.text, ctx.palette)
+    return ResolvedSurface(
+        surface = surface,
+        text = autoText(styledText, surfaceBase, alpha, textFor, style.minContrast)
+            ?: Contrast.ensure(styledText ?: ctx.themeText, surfaceBase, style.minContrast),
+        accent = colorFor(style.accent, ctx.palette) ?: ctx.accent,
+        cornerRadiiDp = style.cornerRadii?.takeIf { id == SurfaceId.FOLDER }?.let { radii ->
+            FloatArray(CORNER_COUNT) { radii.getOrElse(it) { 0f } }
+        }
+    )
+}
+
+private fun cardText(
+    config: StyleConfig,
+    onWallpaper: Int,
+    variant: ThemeStyleVariant? = null
+): ((Int, Float) -> Int)? =
+    if (config.styleFor(SurfaceId.CARDS, variant).let { it.surface.isDefault && it.alpha == null }) {
+        null
+    } else {
+        { base, alpha -> Styles.drawerText(base, alpha, onWallpaper) }
+    }
+
+private fun colorFor(spec: ColorSpec, palette: TonalPalette): Int? = when {
+    spec.fixed != null -> runCatching { android.graphics.Color.parseColor(spec.fixed) }.getOrNull()
+    spec.role != null && spec.tone != null -> palette.tone(spec.role, spec.tone)
+    else -> null
 }

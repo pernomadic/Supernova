@@ -113,8 +113,11 @@ class SearchBarView @JvmOverloads constructor(
             if (glass != IconGlass.OFF) {
                 // A see-through bar would show its own shadow through it, and
                 // an outline-only one has no surface to be glass.
-                val isDark = androidx.core.graphics.ColorUtils.calculateLuminance(resolved.surface or 0xFF000000.toInt()) < 0.4
-                background = GlassPillDrawable(glass, radius, resolved.surface, isDark = isDark).also { it.alpha = alpha }
+                val opaqueSurface = resolved.surface or 0xFF000000.toInt()
+                val isDark = androidx.core.graphics.ColorUtils
+                    .calculateLuminance(opaqueSurface) < DARK_LUMINANCE_THRESHOLD
+                background = GlassPillDrawable(glass, radius, resolved.surface, isDark = isDark)
+                    .also { it.alpha = alpha }
                 elevation = 0f
             } else {
                 pill.cornerRadius = radius
@@ -164,6 +167,7 @@ class SearchBarView @JvmOverloads constructor(
     }
 
     private companion object {
+        const val DARK_LUMINANCE_THRESHOLD = 0.4
         const val CHIP_TAG = "search-bar-chip"
         const val CHIP_DP = SearchBarButtons.BUTTON_DP
         // Leaves the 20dp box the magnifier on the left has.

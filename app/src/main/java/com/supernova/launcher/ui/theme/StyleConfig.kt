@@ -80,7 +80,8 @@ data class StyleConfig(
         return copy(variantSurfaces = newVariants)
     }
 
-    fun encode(): String = if (surfaces.isEmpty() && variantSurfaces.isEmpty()) "" else json.encodeToString(serializer(), this)
+    fun encode(): String =
+        if (surfaces.isEmpty() && variantSurfaces.isEmpty()) "" else json.encodeToString(serializer(), this)
 
     companion object {
         private val json = Json {

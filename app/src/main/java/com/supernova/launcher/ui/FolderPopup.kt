@@ -90,17 +90,17 @@ class FolderPopup(private val context: Context) {
             binding.folderCard.background = com.supernova.launcher.ui.theme.SurfaceShapes.background(
                 surfaceColor ?: context.getColor(com.supernova.launcher.R.color.drawerBackground),
                 FloatArray(4) { cornerRadiiDp[it] * density },
-                context.dp(if (isOneUi) 28 else 24).toFloat()
+                context.dp(if (isOneUi) CORNER_RADIUS_ONEUI_DP else CORNER_RADIUS_WINDOW_DP).toFloat()
             )
         } else if (isOneUi) {
             val density = context.resources.displayMetrics.density
             val textLight = textColor ?: 0xFFFFFFFF.toInt()
-            val isDarkTheme = androidx.core.graphics.ColorUtils.calculateLuminance(textLight) > 0.5
-            val fallbackSurface = if (isDarkTheme) 0xFF1E2735.toInt() else 0xFFFFFFFF.toInt()
+            val isDarkTheme = androidx.core.graphics.ColorUtils.calculateLuminance(textLight) > LUMINANCE_THRESHOLD
+            val fallbackSurface = if (isDarkTheme) ONEUI_FALLBACK_DARK else ONEUI_FALLBACK_LIGHT
             binding.folderCard.background = com.supernova.launcher.ui.theme.SurfaceShapes.background(
                 surfaceColor ?: fallbackSurface,
-                FloatArray(4) { 28f * density },
-                context.dp(28).toFloat()
+                FloatArray(4) { CORNER_RADIUS_ONEUI_DP.toFloat() * density },
+                context.dp(CORNER_RADIUS_ONEUI_DP).toFloat()
             )
         } else {
             surfaceColor?.let { color ->
@@ -143,13 +143,17 @@ class FolderPopup(private val context: Context) {
         val immersive = mode == FolderMode.IMMERSIVE
         val metrics = context.resources.displayMetrics
         val cellWidth = cellWidthPx(context, adapter.iconScale)
-        val columns = if (isOneUi) 4 else columnsFor(context, members.size, columnsOverride, immersive, adapter.iconScale)
+        val columns = if (isOneUi) {
+            ONEUI_COLUMNS
+        } else {
+            columnsFor(context, members.size, columnsOverride, immersive, adapter.iconScale)
+        }
 
         // Cells are wide enough for a typical label at 12sp, and the grid
         // width is fixed so GridLayoutManager centres each tile in its span
         // instead of packing wrap_content tiles against the left edge.
         val gridWidth = if (isOneUi) {
-            metrics.widthPixels - context.dp(40)
+            metrics.widthPixels - context.dp(ONEUI_GRID_MARGIN_DP)
         } else {
             min(columns * cellWidth, metrics.widthPixels - context.dp(48))
         }
@@ -162,38 +166,19 @@ class FolderPopup(private val context: Context) {
         var onPageChange: ((Int) -> Unit)? = null
         if (isOneUi) {
             val cellHeight = measureCellHeight(adapter, members, gridWidth / columns)
-            val fixedRows = 4
+            val fixedRows = ONEUI_ROWS
             val fixedHeight = fixedRows * cellHeight
             binding.folderGrid.layoutManager = PagedGridLayoutManager(columns, fixedRows)
             binding.folderGrid.layoutParams = binding.folderGrid.layoutParams.apply {
                 width = gridWidth
                 height = fixedHeight
             }
-            binding.folderCard.minimumHeight = fixedHeight + context.dp(32)
-            val totalPages = ceil(members.size / 16f).toInt().coerceAtLeast(1)
-            fun updateDots(page: Int) {
-                if (totalPages <= 1) {
-                    binding.oneUiPageIndicator.visibility = View.GONE
-                    return
-                }
-                binding.oneUiPageIndicator.visibility = View.VISIBLE
-                binding.oneUiPageIndicator.removeAllViews()
-                for (i in 0 until totalPages) {
-                    val dot = View(context).apply {
-                        val size = context.dp(6)
-                        layoutParams = android.widget.LinearLayout.LayoutParams(size, size).apply {
-                            setMargins(context.dp(3), 0, context.dp(3), 0)
-                        }
-                        background = GradientDrawable().apply {
-                            shape = GradientDrawable.OVAL
-                            setColor(if (i == page) text else androidx.core.graphics.ColorUtils.setAlphaComponent(text, 0x55))
-                        }
-                    }
-                    binding.oneUiPageIndicator.addView(dot)
-                }
+            binding.folderCard.minimumHeight = fixedHeight + context.dp(ONEUI_EXTRA_HEIGHT_DP)
+            val totalPages = ceil(members.size / ONEUI_PAGE_SIZE).toInt().coerceAtLeast(1)
+            renderOneUiDots(context, binding.oneUiPageIndicator, totalPages, 0, text)
+            onPageChange = { page ->
+                renderOneUiDots(context, binding.oneUiPageIndicator, totalPages, page, text)
             }
-            updateDots(0)
-            onPageChange = { page -> updateDots(page) }
             attachColumnPaging(binding.folderGrid, gridWidth, smooth = animate, onPage = onPageChange)
         } else {
             when (scroll) {
@@ -272,8 +257,8 @@ class FolderPopup(private val context: Context) {
         // The root always fills the window so the card can expand from the
         // icon underneath it; WINDOW mode just keeps the scrim transparent.
         if (isOneUi) {
-            val isDarkTheme = androidx.core.graphics.ColorUtils.calculateLuminance(text) > 0.5
-            val scrimColor = if (isDarkTheme) 0xF2000000.toInt() else 0xD9EAEAEA.toInt()
+            val isDarkTheme = androidx.core.graphics.ColorUtils.calculateLuminance(text) > LUMINANCE_THRESHOLD
+            val scrimColor = if (isDarkTheme) ONEUI_SCRIM_DARK else ONEUI_SCRIM_LIGHT
             binding.folderScrim.setBackgroundColor(scrimColor)
         }
         binding.folderCard.layoutParams = FrameLayout.LayoutParams(
@@ -282,7 +267,7 @@ class FolderPopup(private val context: Context) {
             if (isOneUi) (Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL) else (Gravity.TOP or Gravity.START)
         ).apply {
             if (isOneUi) {
-                setMargins(context.dp(20), 0, context.dp(20), context.dp(72))
+                setMargins(context.dp(20), 0, context.dp(20), context.dp(ONEUI_BOTTOM_MARGIN_DP))
             }
         }
         // The card swallows taps; only true outside taps reach the scrim.
@@ -400,20 +385,21 @@ class FolderPopup(private val context: Context) {
                 val cardRight = card.right
                 val titleParams = binding.oneUiTitle.layoutParams as? FrameLayout.LayoutParams
                 titleParams?.apply {
-                    topMargin = (metrics.heightPixels * 0.14f).toInt()
+                    topMargin = (metrics.heightPixels * ONEUI_TITLE_TOP_RATIO).toInt()
                 }
                 binding.oneUiTitle.layoutParams = titleParams
                 val addParams = binding.oneUiAddButton.layoutParams as? FrameLayout.LayoutParams
                 addParams?.apply {
                     gravity = Gravity.TOP or Gravity.START
-                    leftMargin = cardRight - context.dp(44)
-                    topMargin = (cardTop - context.dp(52)).coerceAtLeast(context.dp(16))
+                    leftMargin = cardRight - context.dp(ONEUI_ADD_BTN_OFFSET_X_DP)
+                    topMargin = (cardTop - context.dp(ONEUI_ADD_BTN_OFFSET_Y_DP))
+                        .coerceAtLeast(context.dp(ONEUI_ADD_BTN_MIN_TOP_DP))
                 }
                 binding.oneUiAddButton.layoutParams = addParams
                 val dotsParams = binding.oneUiPageIndicator.layoutParams as? FrameLayout.LayoutParams
                 dotsParams?.apply {
                     gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
-                    bottomMargin = (metrics.heightPixels * 0.035f).toInt()
+                    bottomMargin = (metrics.heightPixels * ONEUI_INDICATOR_BOTTOM_RATIO).toInt()
                 }
                 binding.oneUiPageIndicator.layoutParams = dotsParams
                 restingY = card.translationY
@@ -501,9 +487,80 @@ class FolderPopup(private val context: Context) {
         return holder.itemView.measuredHeight.coerceAtLeast(1)
     }
 
+    private fun renderOneUiDots(
+        context: Context,
+        indicator: android.widget.LinearLayout,
+        totalPages: Int,
+        currentPage: Int,
+        textColor: Int
+    ) {
+        if (totalPages <= 1) {
+            indicator.visibility = View.GONE
+            return
+        }
+        indicator.visibility = View.VISIBLE
+        indicator.removeAllViews()
+        val size = context.dp(ONEUI_DOT_SIZE_DP)
+        val margin = context.dp(ONEUI_DOT_MARGIN_DP)
+        val inactiveColor = androidx.core.graphics.ColorUtils.setAlphaComponent(textColor, ONEUI_DOT_ALPHA)
+        for (i in 0 until totalPages) {
+            val dot = View(context)
+            dot.layoutParams = android.widget.LinearLayout.LayoutParams(size, size).apply {
+                setMargins(margin, 0, margin, 0)
+            }
+            val drawable = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(if (i == currentPage) textColor else inactiveColor)
+            }
+            dot.background = drawable
+            indicator.addView(dot)
+        }
+    }
+
     companion object {
         private const val HINT_ALPHA = 0x80
         private const val COUNT_ALPHA = 0xB3
+        private const val CORNER_RADIUS_WINDOW_DP = 24
+        private const val CORNER_RADIUS_ONEUI_DP = 28
+        private const val ONEUI_EXTRA_HEIGHT_DP = 32
+        private const val ONEUI_PAGE_SIZE = 16f
+        private const val ONEUI_DOT_SIZE_DP = 6
+        private const val ONEUI_DOT_MARGIN_DP = 3
+        private const val ONEUI_DOT_ALPHA = 0x55
+        private const val ONEUI_GRID_MARGIN_DP = 40
+        private const val ONEUI_BOTTOM_MARGIN_DP = 72
+        private const val ONEUI_COLUMNS = 4
+        private const val ONEUI_ROWS = 4
+        private const val LUMINANCE_THRESHOLD = 0.5
+        private const val ONEUI_TITLE_TOP_RATIO = 0.14f
+        private const val ONEUI_ADD_BTN_OFFSET_X_DP = 44
+        private const val ONEUI_ADD_BTN_OFFSET_Y_DP = 52
+        private const val ONEUI_ADD_BTN_MIN_TOP_DP = 16
+        private const val ONEUI_INDICATOR_BOTTOM_RATIO = 0.035f
+        private const val ONEUI_SCRIM_DARK = 0xF2000000.toInt()
+        private const val ONEUI_SCRIM_LIGHT = 0xD9EAEAEA.toInt()
+        private const val ONEUI_FALLBACK_DARK = 0xFF1E2735.toInt()
+        private const val ONEUI_FALLBACK_LIGHT = 0xFFFFFFFF.toInt()
+
+        // Member tile width at the base icon size: the 48dp icon plus room
+        // for a one-line 12sp label.
+        private const val CELL_WIDTH_DP = 76
+
+        // Columns a landscape folder gains over its portrait count, trading
+        // the height it does not have for the width it does.
+        private const val LANDSCAPE_EXTRA_COLUMNS = 2
+
+        private const val OPEN_MS = 240L
+        private const val CLOSE_MS = 160L
+        private const val SCRIM_MS = 120L
+        private const val LIFT_MS = 200L
+
+        // Room left between the card's title row and the keyboard's top.
+        private const val KEYBOARD_GAP_DP = 12
+
+        // OneUI smooth spring-like curve and soft collapse curve.
+        private val EXPAND = PathInterpolator(0.22f, 0.25f, 0f, 1f)
+        private val COLLAPSE = PathInterpolator(0.25f, 0f, 0.22f, 1f)
 
         // A member's icon box grows with the folder's icon size
         // (FolderMemberAdapter), so its cell grows with it, as the drawer's
@@ -538,28 +595,5 @@ class FolderPopup(private val context: Context) {
                     .coerceAtMost(count.coerceAtLeast(2))
             }
         }
-
-        // 70%-black dim behind the immersive card (#B3000000).
-        private const val IMMERSIVE_SCRIM = -0x4D000000
-
-        // Member tile width at the base icon size: the 48dp icon plus room
-        // for a one-line 12sp label.
-        private const val CELL_WIDTH_DP = 76
-
-        // Columns a landscape folder gains over its portrait count, trading
-        // the height it does not have for the width it does.
-        private const val LANDSCAPE_EXTRA_COLUMNS = 2
-
-        private const val OPEN_MS = 240L
-        private const val CLOSE_MS = 160L
-        private const val SCRIM_MS = 120L
-        private const val LIFT_MS = 200L
-
-        // Room left between the card's title row and the keyboard's top.
-        private const val KEYBOARD_GAP_DP = 12
-
-        // OneUI smooth spring-like curve and soft collapse curve.
-        private val EXPAND = PathInterpolator(0.22f, 0.25f, 0f, 1f)
-        private val COLLAPSE = PathInterpolator(0.25f, 0f, 0.22f, 1f)
     }
 }

@@ -20,6 +20,7 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.tabs.TabLayout
 import com.supernova.launcher.R
 import com.supernova.launcher.data.DrawerGroup
+import com.supernova.launcher.data.HomeScreenLayout
 import com.supernova.launcher.data.LaunchableApp
 import com.supernova.launcher.data.LauncherPrefs
 import com.supernova.launcher.runLogged
@@ -874,8 +875,7 @@ class DrawerController(
 
     fun beginPull() {
         val prefs = viewModel.state.value.prefs
-        if (prefs.homeScreenLayout == com.supernova.launcher.data.HomeScreenLayout.HOME_ONLY) return
-        if (isPulling) return
+        if (prefs.homeScreenLayout == HomeScreenLayout.HOME_ONLY || isPulling) return
         if (transition != DrawerTransition.SLIDE_UP) {
             open()
             return

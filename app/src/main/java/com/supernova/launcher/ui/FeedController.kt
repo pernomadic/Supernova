@@ -579,7 +579,7 @@ class FeedController(
         pane.feedSearchBar.onTap = {
             when (viewModel.state.value.prefs.searchBarTapAction) {
                 SearchBarTapAction.CHROME -> SearchBarButtons.openChromeSearch(context)
-                SearchBarTapAction.FINDER -> SearchBarButtons.openSamsungFinder(context)
+                SearchBarTapAction.FINDER -> openSamsungFinder(context)
                 SearchBarTapAction.DEFAULT -> host.onOpenSearch()
             }
         }

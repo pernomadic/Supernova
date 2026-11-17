@@ -1162,5 +1162,6 @@
     <string name="style_group_surfaces_light_default">Surfaces (Light Default)</string>
     <string name="style_group_surfaces_light_frosted">Surfaces (Light Frosted)</string>
     <string name="style_surfaces_sub_summary">Customize surfaces for this theme style</string>
+    <string name="style_title_with_variant">%1$s (%2$s)</string>
     <string name="accent_system">Follow system</string>
 </resources>

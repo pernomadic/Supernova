@@ -44,6 +44,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.supernova.launcher.data.HomeScreenLayout
 import com.supernova.launcher.ui.ShortcutItem
 import com.supernova.launcher.ui.dp
 import com.supernova.launcher.ui.showTracked
@@ -969,34 +970,26 @@ class LauncherActivity :
         }
     }
 
+    private fun animateEntranceView(view: View, durationMs: Long, interpolator: android.view.animation.Interpolator) {
+        view.scaleX = UNLOCK_SCALE
+        view.scaleY = UNLOCK_SCALE
+        view.alpha = 0f
+        view.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(durationMs).setInterpolator(interpolator).start()
+    }
+
     private fun playUnlockEntranceAnimation() {
         val prefs = viewModel.state.value.prefs
         if (!prefs.unlockEntranceAnimation || !Animations.enabled(prefs)) return
         val speed = Animations.factor(prefs)
-        val durationMs = (380L * speed).toLong().coerceAtLeast(1L)
-        val interpolator = PathInterpolator(0.22f, 0.25f, 0f, 1f)
+        val durationMs = (UNLOCK_DURATION_BASE_MS * speed).toLong().coerceAtLeast(1L)
+        val interpolator = PathInterpolator(UNLOCK_PATH_X1, UNLOCK_PATH_Y1, 0f, 1f)
 
-        binding.workspacePager.apply {
-            scaleX = 0.94f
-            scaleY = 0.94f
-            alpha = 0f
-            animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(durationMs).setInterpolator(interpolator).start()
-        }
+        animateEntranceView(binding.workspacePager, durationMs, interpolator)
         if (binding.dockBar.visibility == View.VISIBLE) {
-            binding.dockBar.apply {
-                scaleX = 0.94f
-                scaleY = 0.94f
-                alpha = 0f
-                animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(durationMs).setInterpolator(interpolator).start()
-            }
+            animateEntranceView(binding.dockBar, durationMs, interpolator)
         }
         if (binding.desktopSearchBar.visibility == View.VISIBLE) {
-            binding.desktopSearchBar.apply {
-                scaleX = 0.94f
-                scaleY = 0.94f
-                alpha = 0f
-                animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(durationMs).setInterpolator(interpolator).start()
-            }
+            animateEntranceView(binding.desktopSearchBar, durationMs, interpolator)
         }
     }
 
@@ -1248,7 +1241,7 @@ class LauncherActivity :
 
     private fun drawerPullAllowed(): Boolean {
         if (!::drawer.isInitialized || drawer.isVisible) return false
-        if (viewModel.state.value.prefs.homeScreenLayout == com.supernova.launcher.data.HomeScreenLayout.HOME_ONLY) return false
+        if (viewModel.state.value.prefs.homeScreenLayout == HomeScreenLayout.HOME_ONLY) return false
         if (::feed.isInitialized && feed.isOpen) return false
         if (::search.isInitialized && search.isOpen) return false
         if (::editMode.isInitialized && editMode.isOpen) return false
@@ -1559,17 +1552,19 @@ class LauncherActivity :
         // arrives with its own field focused and the keyboard up, whatever
         // the drawer's keyboard setting. The bar's search chip and the
         // gestures still reach the global overlay.
-        binding.desktopSearchBar.onTap = {
-            when (viewModel.state.value.prefs.searchBarTapAction) {
-                com.supernova.launcher.ui.SearchBarTapAction.CHROME ->
-                    com.supernova.launcher.ui.SearchBarButtons.openChromeSearch(this)
-                com.supernova.launcher.ui.SearchBarTapAction.FINDER ->
-                    com.supernova.launcher.ui.SearchBarButtons.openSamsungFinder(this)
-                com.supernova.launcher.ui.SearchBarTapAction.DEFAULT ->
-                    openDrawer(forSearch = true)
-            }
-        }
+        binding.desktopSearchBar.onTap = ::onDesktopSearchBarTap
         binding.desktopSearchBar.onLongPress = { anchor -> showSearchBarMenu(anchor) }
+    }
+
+    private fun onDesktopSearchBarTap() {
+        when (viewModel.state.value.prefs.searchBarTapAction) {
+            com.supernova.launcher.ui.SearchBarTapAction.CHROME ->
+                com.supernova.launcher.ui.SearchBarButtons.openChromeSearch(this)
+            com.supernova.launcher.ui.SearchBarTapAction.FINDER ->
+                com.supernova.launcher.ui.openSamsungFinder(this)
+            com.supernova.launcher.ui.SearchBarTapAction.DEFAULT ->
+                openDrawer(forSearch = true)
+        }
     }
 
     // The Direct dial intent waiting on the phone permission. Refused, it
@@ -2572,7 +2567,7 @@ class LauncherActivity :
     }
 
     private fun openDrawer(forSearch: Boolean = false) {
-        if (viewModel.state.value.prefs.homeScreenLayout == com.supernova.launcher.data.HomeScreenLayout.HOME_ONLY) return
+        if (viewModel.state.value.prefs.homeScreenLayout == HomeScreenLayout.HOME_ONLY) return
         animateWallpaperZoom(1f)
         drawer.open(forSearch)
     }
@@ -2846,7 +2841,7 @@ class LauncherActivity :
     // keeping its strip as the dock keeps its margins.
     private fun syncSwipeArrow(prefs: LauncherPrefs) {
         binding.dockSwipeIndicator.visibility =
-            if (swipeArrowWanted(prefs) && binding.dockBar.visibility == View.VISIBLE) View.VISIBLE else View.GONE
+            if (swipeArrowWanted(prefs) && binding.dockBar.isVisible) View.VISIBLE else View.GONE
     }
 
     // The app-open transition. Single choke point: every app, shortcut and
@@ -3655,7 +3650,7 @@ class LauncherActivity :
         val snackbar = Snackbar
             .make(binding.root, R.string.item_removed, UNDO_DURATION_MS)
             .setAction(R.string.undo) { viewModel.restoreItems(listOf(item) + members) }
-        if (binding.dockBar.visibility == View.VISIBLE) {
+        if (binding.dockBar.isVisible) {
             snackbar.anchorView = binding.dockBar
         }
         snackbar.addCallback(object : Snackbar.Callback() {
@@ -5111,5 +5106,10 @@ class LauncherActivity :
         private const val DOCK_SLOT_TIGHT_EXTRA_DP = 8
 
         private const val WALLPAPER_ZOOM_MS = 250L
+
+        private const val UNLOCK_DURATION_BASE_MS = 380L
+        private const val UNLOCK_SCALE = 0.94f
+        private const val UNLOCK_PATH_X1 = 0.22f
+        private const val UNLOCK_PATH_Y1 = 0.25f
     }
 }

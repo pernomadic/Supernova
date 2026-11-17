@@ -28,6 +28,7 @@ import com.supernova.launcher.data.FolderMove
 import com.supernova.launcher.data.FolderToDrawer
 import com.supernova.launcher.data.GroupPick
 import com.supernova.launcher.data.HiddenLabels
+import com.supernova.launcher.data.HomeScreenLayout
 import com.supernova.launcher.data.IconPack
 import com.supernova.launcher.data.IconShape
 import com.supernova.launcher.data.ItemType
@@ -442,7 +443,9 @@ class LauncherViewModel(
         if (userSerial != 0L) return
         viewModelScope.launch(Dispatchers.Default) {
             val prefs = preferences.flow.first()
-            if (!prefs.autoAddApps && prefs.homeScreenLayout != com.supernova.launcher.data.HomeScreenLayout.HOME_ONLY) return@launch
+            if (!prefs.autoAddApps && prefs.homeScreenLayout != HomeScreenLayout.HOME_ONLY) {
+                return@launch
+            }
             val app = catalog.mainActivityFor(packageName, userSerial) ?: return@launch
             repository.autoAddApp(app, prefs.gridCols, prefs.gridRows)
         }

@@ -708,7 +708,8 @@ class SearchController(
         val alpha = (config.alpha.coerceIn(0f, 1f) * OPAQUE).toInt()
         val glass = com.supernova.launcher.data.IconGlass.fromName(config.glass)
         if (glass != com.supernova.launcher.data.IconGlass.OFF) {
-            val isDark = androidx.core.graphics.ColorUtils.calculateLuminance(bar.surface or 0xFF000000.toInt()) < 0.4
+            val opaqueSurface = bar.surface or 0xFF000000.toInt()
+            val isDark = androidx.core.graphics.ColorUtils.calculateLuminance(opaqueSurface) < DARK_LUMINANCE_THRESHOLD
             return GlassPillDrawable(glass, radius, bar.surface, isDark = isDark).also { it.alpha = alpha }
         }
         return android.graphics.drawable.GradientDrawable().apply {
@@ -739,6 +740,7 @@ class SearchController(
 
 
     private companion object {
+        const val DARK_LUMINANCE_THRESHOLD = 0.4
         const val OPAQUE = 255
         const val TOP_HIT_MIN_CHARS = 3
         const val TOP_HIT_MAX_SHORTCUTS = 6

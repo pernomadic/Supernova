@@ -12,6 +12,7 @@ import com.supernova.launcher.R
 import com.supernova.launcher.SettingsActivity
 import com.supernova.launcher.SupernovaAccessibilityService
 import com.supernova.launcher.SupernovaDeviceAdmin
+import com.supernova.launcher.data.HomeScreenLayout
 import com.supernova.launcher.data.LaunchTarget
 import com.supernova.launcher.data.LaunchableApp
 import com.supernova.launcher.data.LockMethod
@@ -76,7 +77,7 @@ class ActionRunner(
         return when (bound.action) {
             GestureAction.NONE -> false
             GestureAction.OPEN_DRAWER -> {
-                if (viewModel.state.value.prefs.homeScreenLayout != com.supernova.launcher.data.HomeScreenLayout.HOME_ONLY) {
+                if (viewModel.state.value.prefs.homeScreenLayout != HomeScreenLayout.HOME_ONLY) {
                     host.openDrawer()
                 }
                 true

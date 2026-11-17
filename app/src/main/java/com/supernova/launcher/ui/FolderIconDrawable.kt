@@ -347,8 +347,12 @@ class FolderIconDrawable(
 
         // The plate: the folder window's colour when matched, else the
         // picked one (Default = see-through white or theme-adapted color).
-        fun plateColor(match: Boolean, picked: String, windowSurface: Int, defaultColor: Int = DEFAULT_PLATE_COLOR): Int =
-            if (match) windowSurface else LabelStyler.parseColor(picked, defaultColor)
+        fun plateColor(
+            match: Boolean,
+            picked: String,
+            windowSurface: Int,
+            defaultColor: Int = DEFAULT_PLATE_COLOR
+        ): Int = if (match) windowSurface else LabelStyler.parseColor(picked, defaultColor)
 
         // What a folder's own icon is drawn from, for the page and dock
         // signatures: a custom icon, or Reshape turned off for one, changes

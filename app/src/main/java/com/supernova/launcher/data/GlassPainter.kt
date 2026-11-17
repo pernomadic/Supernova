@@ -141,7 +141,7 @@ class GlassPainter(var isDark: Boolean = false) {
         val bottom = height.toFloat()
         val base = when {
             glass == IconGlass.SMOKED -> if (isDark) IconGlass.SMOKE_COLOR else 0xFF606670.toInt()
-            isDark -> ColorUtils.blendARGB(color, Color.BLACK, 0.45f)
+            isDark -> ColorUtils.blendARGB(color, Color.BLACK, DARK_BLEND_RATIO)
             else -> color
         }
         val hazeTarget = if (isDark && glass != IconGlass.SMOKED) 0xFF202020.toInt() else Color.WHITE
@@ -157,8 +157,8 @@ class GlassPainter(var isDark: Boolean = false) {
             paint.shader = BitmapShader(grainTile, Shader.TileMode.REPEAT, Shader.TileMode.REPEAT)
             canvas.drawRect(0f, 0f, right, bottom, paint)
         }
-        val sheenColor = if (isDark) white(glass.sheen * 0.4f) else white(glass.sheen)
-        val glowColor = if (isDark) white(glass.glow * 0.4f) else white(glass.glow)
+        val sheenColor = if (isDark) white(glass.sheen * DARK_SHEEN_FACTOR) else white(glass.sheen)
+        val glowColor = if (isDark) white(glass.glow * DARK_SHEEN_FACTOR) else white(glass.glow)
         val sheenEnd = bottom * SHEEN_DEPTH
         paint.shader = LinearGradient(
             0f, 0f, 0f, sheenEnd, sheenColor, Color.TRANSPARENT, Shader.TileMode.CLAMP
@@ -208,6 +208,8 @@ class GlassPainter(var isDark: Boolean = false) {
         const val VIEWPORT = 2f / 3f
         const val MIN_TILE_COVER = 0.5f
         const val OPAQUE = 255
+        const val DARK_BLEND_RATIO = 0.45f
+        const val DARK_SHEEN_FACTOR = 0.4f
         // The sheen covers the top 55%, the glow the bottom 35%.
         const val SHEEN_DEPTH = 0.55f
         const val GLOW_DEPTH = 0.35f
