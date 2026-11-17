@@ -23,7 +23,19 @@ class SupernovaApp : Application() {
         installCrashHandler()
         Diagnostics.install(this)
         applyStoredTheme()
+        followThemeMode()
         followLauncherAnimations()
+    }
+
+    private fun followThemeMode() {
+        MainScope().launch {
+            graph.preferences.flow
+                .map { listOf(it.themeMode, it.themeScheduleStart, it.themeScheduleEnd, it.darkStyle, it.lightStyle) }
+                .distinctUntilChanged()
+                .collect {
+                    ThemeEngine.applyMode(this@SupernovaApp, graph.preferences.snapshot())
+                }
+        }
     }
 
     // The launcher's animations follow its own switch, whatever the

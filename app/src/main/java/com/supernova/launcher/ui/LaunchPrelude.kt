@@ -208,8 +208,8 @@ class LaunchPrelude(private val root: ViewGroup) {
         // How long the filled circle may outstay a launch that never stops
         // the launcher.
         const val COVER_HOLD_MS = 1000L
-        // Launcher3's AGGRESSIVE_EASE and EXAGGERATED_EASE.
-        val AGGRESSIVE_EASE = PathInterpolator(0.2f, 0f, 0f, 1f)
+        // OneUI spring ease and Launcher3 exaggerated ease.
+        val AGGRESSIVE_EASE = PathInterpolator(0.22f, 0.25f, 0f, 1f)
         val EXAGGERATED_EASE = PathInterpolator(
             android.graphics.Path().apply {
                 moveTo(0f, 0f)

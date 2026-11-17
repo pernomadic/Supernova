@@ -576,7 +576,13 @@ class FeedController(
         pane.feedRecycler.layoutManager =
             androidx.recyclerview.widget.LinearLayoutManager(context)
         cardDrag.attach(pane.feedRecycler)
-        pane.feedSearchBar.onTap = { host.onOpenSearch() }
+        pane.feedSearchBar.onTap = {
+            when (viewModel.state.value.prefs.searchBarTapAction) {
+                SearchBarTapAction.CHROME -> SearchBarButtons.openChromeSearch(context)
+                SearchBarTapAction.FINDER -> SearchBarButtons.openSamsungFinder(context)
+                SearchBarTapAction.DEFAULT -> host.onOpenSearch()
+            }
+        }
         // The feed's Settings button opens the Feed page.
         pane.feedSearchBar.onChip = { chip ->
             (chip == com.supernova.launcher.ui.SearchBarChip.SETTINGS).also { if (it) host.openFeedSettings() }
@@ -646,7 +652,8 @@ class FeedController(
         val buttons = SearchBarButtons.decode(prefs.feedBarButtons).map { it.name }
         pane.feedSearchBar.apply(
             SearchBarConfig.decode(prefs.searchBarConfig).desktop.copy(chips = buttons),
-            resolved.of(SurfaceId.SEARCH_BAR)
+            resolved.of(SurfaceId.SEARCH_BAR),
+            prefs.searchBarColoredIcons
         )
     }
 

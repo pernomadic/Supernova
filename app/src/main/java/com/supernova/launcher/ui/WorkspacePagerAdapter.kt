@@ -345,6 +345,7 @@ class WorkspacePagerAdapter(private val host: Host) : RecyclerView.Adapter<Recyc
             // Folder icon appearance: the dock's signature takes every pref,
             // and without these a page kept its old plates until a restart.
             "${prefs.folderIconShape},${prefs.folderIconOutline}," +
+            "${prefs.themeMode},${prefs.darkStyle},${prefs.lightStyle},${prefs.glassFollowsTheme}," +
             "${prefs.folderMatchWindowColor},${prefs.folderPlateColor}," +
             "${prefs.folderPrioritizeFirst},${prefs.folderBgColor}," +
             // The window's order and columns pick the preview's members.

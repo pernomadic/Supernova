@@ -1,8 +1,23 @@
 package com.supernova.launcher.ui
 
+import com.supernova.launcher.data.SettingEnumSerializer
 import com.supernova.launcher.runLogged
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+
+// Action executed when tapping the search bar body.
+@Serializable(with = SearchBarTapAction.Names::class)
+enum class SearchBarTapAction {
+    DEFAULT,
+    CHROME,
+    FINDER;
+
+    object Names : SettingEnumSerializer<SearchBarTapAction>("SearchBarTapAction", entries, DEFAULT)
+
+    companion object {
+        fun fromName(name: String): SearchBarTapAction = Names.parse(name)
+    }
+}
 
 // Where the desktop search bar sits. PERSISTENT is the bottom bar that stays
 // when the dock is off; TOP is pinned under the status bar on every page.
@@ -23,7 +38,7 @@ enum class SearchBarPlacement {
 // field in drawerActionButtons order. An App drawer chip was removed; a
 // config still naming it decodes without it.
 enum class SearchBarChip {
-    VOICE, ASSISTANT, DATE, PLAY_STORE, SETTINGS;
+    VOICE, ASSISTANT, DATE, PLAY_STORE, SETTINGS, CHROME, WEATHER;
 
     companion object {
         fun fromName(name: String): SearchBarChip? =

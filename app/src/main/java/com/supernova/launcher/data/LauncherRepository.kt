@@ -129,6 +129,22 @@ class LauncherRepository(private val context: Context) {
         mutateFitted(cols, rows) { current -> AutoAdd.place(current, app, id(), cols, rows) }
     }
 
+    // Populates unplaced apps onto the home pages in drawer order for Home Screen Only mode.
+    suspend fun populateHomeScreenOnly(apps: List<LaunchableApp>, cols: Int, rows: Int) {
+        mutateFitted(cols, rows) { current ->
+            val existingKeys = current.items.filter { it.itemType == ItemType.APP }
+                .map { it.packageName to it.userSerial }.toSet()
+            val unplaced = apps.filterNot { (it.packageName to it.userSerial) in existingKeys }
+            if (unplaced.isEmpty()) return@mutateFitted current
+
+            var updated = current
+            for (app in unplaced) {
+                updated = AutoAdd.place(updated, app, id(), cols, rows)
+            }
+            updated
+        }
+    }
+
     suspend fun addShortcutToWorkspace(
         app: LaunchableApp,
         shortcutId: String,

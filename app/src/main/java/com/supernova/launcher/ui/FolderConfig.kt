@@ -7,7 +7,8 @@ import com.supernova.launcher.data.SettingEnumSerializer
 @kotlinx.serialization.Serializable(with = FolderMode.Names::class)
 enum class FolderMode {
     WINDOW,
-    IMMERSIVE;
+    IMMERSIVE,
+    ONEUI_FULLSCREEN;
 
     // Its name in the store and in a backup, read back leniently.
     object Names : SettingEnumSerializer<FolderMode>("FolderMode", entries, WINDOW)

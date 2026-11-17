@@ -126,15 +126,21 @@ class FeedCardRoutes(
         }
     }
 
-    // The card menu: Edit, Pin to top (or Unpin), Remove with an Undo. Cards
+    // The card menu: Edit, Widget Options (if reconfigurable), Pin to top (or Unpin), Remove with an Undo. Cards
     // move by dragging.
     private fun showCardMenu(card: FeedCard, anchor: View) {
-        val entries = listOf<Pair<Int, () -> Unit>>(
-            R.string.card_menu_edit to { edit(card) },
+        val entries = mutableListOf<Pair<Int, () -> Unit>>()
+        entries.add(R.string.card_menu_edit to { edit(card) })
+        val widgetId = card.appWidgetId
+        if (widgetId != null && widgets().isWidgetReconfigurable(widgetId)) {
+            entries.add(R.string.widget_options to { widgets().openWidgetSettings(widgetId) })
+        }
+        entries.add(
             (if (card.pinned) R.string.card_menu_unpin else R.string.card_menu_pin) to
-                { viewModel.setFeedCardPinned(card.id, !card.pinned) },
-            R.string.card_menu_remove to { remove(card, anchor) }
+                { viewModel.setFeedCardPinned(card.id, !card.pinned) }
         )
+        entries.add(R.string.card_menu_remove to { remove(card, anchor) })
+
         ChoiceMenu.showActions(
             anchor, viewModel.state.value.prefs, entries.map { activity.getString(it.first) }
         ) { which -> entries[which].second() }

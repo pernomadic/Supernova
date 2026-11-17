@@ -1854,6 +1854,7 @@ class DrawerController(
     // the drawer-affecting prefs change; guarded so emissions are cheap.
     private fun applyStyle(prefs: LauncherPrefs) {
         val key = listOf(
+            prefs.homeScreenLayout,
             prefs.drawerStyle, prefs.drawerColumns, prefs.drawerRows,
             prefs.drawerBgOpacity,
             prefs.drawerFastScroller, prefs.drawerBgColor,
@@ -1867,14 +1868,21 @@ class DrawerController(
             // The automatic column count and the page rows follow the icon
             // size (columnCount, syncPages).
             iconScale(prefs),
-            prefs.drawerPaddingH, prefs.drawerPaddingV
+            prefs.drawerPaddingH, prefs.drawerPaddingV,
+            prefs.searchBarColoredIcons
         )
         if (key == appliedStyle) return
         appliedStyle = key
 
-        applyTransition(prefs)
-
         val sheet = binding.drawerSheet
+        if (prefs.homeScreenLayout == com.supernova.launcher.data.HomeScreenLayout.HOME_ONLY) {
+            sheet.visibility = View.GONE
+            behavior.isHideable = true
+            behavior.state = BottomSheetBehavior.STATE_HIDDEN
+            return
+        }
+
+        applyTransition(prefs)
         val tabs = binding.drawerTabs
         val wantBottom = prefs.drawerTabBar == DrawerTabBar.BOTTOM
 
@@ -2017,7 +2025,7 @@ class DrawerController(
         )
         dateButton = null
         actionButtons.forEach { button ->
-            val view = SearchBarButtons.view(context, button, resolvedField.text) {
+            val view = SearchBarButtons.view(context, button, resolvedField.text, prefs.searchBarColoredIcons) {
                 SearchBarButtons.run(context, button)
             }
             view.tag = actionTag

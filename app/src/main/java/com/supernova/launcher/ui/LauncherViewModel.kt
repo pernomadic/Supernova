@@ -171,7 +171,7 @@ class LauncherViewModel(
     private var appliedIconShapeCustom: String? = null
     private var appliedReshape: com.supernova.launcher.data.ReshapeLegacy? = null
     private var appliedShadow: Boolean? = null
-    private var appliedGlass: com.supernova.launcher.data.IconGlass? = null
+    private var appliedGlassSig: String? = null
     // Themed-icon colors depend on the whole palette, so track a signature.
     private var appliedThemedSig: String? = null
     private var autoBackupWritten = false
@@ -220,7 +220,10 @@ class LauncherViewModel(
                 val reshape = com.supernova.launcher.data.ReshapeLegacy.fromPrefs(prefs)
                 val normalizeChanged = reshape != appliedReshape
                 val shadowChanged = prefs.iconShadow != appliedShadow
-                val glassChanged = prefs.iconGlass != appliedGlass
+                val isNight = com.supernova.launcher.ui.theme.ThemeEngine.isNight(getApplication(), prefs)
+                val glassDark = prefs.glassFollowsTheme && isNight
+                val glassSig = "${prefs.iconGlass}|$glassDark"
+                val glassChanged = glassSig != appliedGlassSig
                 val themedSig = themedIconSignature(prefs)
                 val themedChanged = themedSig != appliedThemedSig
                 val resolution = iconResolution(prefs, large)
@@ -236,7 +239,7 @@ class LauncherViewModel(
                 appliedIconShapeCustom = prefs.iconShapeCustom
                 appliedReshape = reshape
                 appliedShadow = prefs.iconShadow
-                appliedGlass = prefs.iconGlass
+                appliedGlassSig = glassSig
                 appliedThemedSig = themedSig
                 withContext(Dispatchers.Default) {
                     if (packChanged) catalog.applyIconPack(prefs.iconPack)
@@ -249,7 +252,7 @@ class LauncherViewModel(
                     if (normalizeChanged) catalog.applyReshapeLegacy(reshape)
                     if (shadowChanged) catalog.applyIconShadow(prefs.iconShadow)
                     if (glassChanged) {
-                        catalog.applyIconGlass(prefs.iconGlass)
+                        catalog.applyIconGlass(prefs.iconGlass, glassDark)
                     }
                     if (resolutionChanged) catalog.applyIconResolution(resolution)
                     if (themedChanged) {
@@ -434,14 +437,25 @@ class LauncherViewModel(
     }
 
     // Auto-add: a newly installed primary-profile app lands on the first page
-    // with a free cell, or a new last page, when the pref is on.
+    // with a free cell, or a new last page, when the pref is on or in HOME_ONLY mode.
     private fun maybeAutoAddToHome(packageName: String, userSerial: Long) {
         if (userSerial != 0L) return
         viewModelScope.launch(Dispatchers.Default) {
             val prefs = preferences.flow.first()
-            if (!prefs.autoAddApps) return@launch
+            if (!prefs.autoAddApps && prefs.homeScreenLayout != com.supernova.launcher.data.HomeScreenLayout.HOME_ONLY) return@launch
             val app = catalog.mainActivityFor(packageName, userSerial) ?: return@launch
             repository.autoAddApp(app, prefs.gridCols, prefs.gridRows)
+        }
+    }
+
+    fun setHomeScreenLayout(layout: com.supernova.launcher.data.HomeScreenLayout) {
+        viewModelScope.launch {
+            preferences.set(Pref.homeScreenLayout, layout)
+            if (layout == com.supernova.launcher.data.HomeScreenLayout.HOME_ONLY) {
+                val prefs = preferences.flow.first()
+                val apps = visibleApps()
+                repository.populateHomeScreenOnly(apps, prefs.gridCols, prefs.gridRows)
+            }
         }
     }
 

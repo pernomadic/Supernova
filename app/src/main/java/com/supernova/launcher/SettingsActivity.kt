@@ -456,9 +456,9 @@ class SettingsActivity : AppCompatActivity() {
                     .show()
             },
             openPaletteDialog = ::showPaletteSourcePicker,
-            openStylePicker = { surfaceId ->
+            openStylePicker = { surfaceId, variant ->
                 stylePickerOpen = true
-                StylePickerSheet.show(this, viewModel, surfaceId) {
+                StylePickerSheet.show(this, viewModel, surfaceId, variant) {
                     stylePickerOpen = false
                     recreateForAccent(viewModel.state.value.prefs)
                 }

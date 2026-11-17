@@ -1133,4 +1133,32 @@
     <string name="a11y_taller">Make taller</string>
     <string name="a11y_shorter">Make shorter</string>
     <string name="a11y_no_room">No free spot there</string>
+
+    <!-- Aryonova OneUI & Theming Extensions -->
+    <string name="dark_style">Dark style</string>
+    <string name="light_style">Light style</string>
+    <string name="style_default">Default</string>
+    <string name="style_amoled">AMOLED</string>
+    <string name="style_frosted">Frosted</string>
+    <string name="glass_follows_theme">Glass follows theme</string>
+    <string name="glass_follows_theme_summary">Tints glass backgrounds according to the active theme</string>
+    <string name="folder_mode_oneui">Alternate Full screen</string>
+    <string name="widget_options">Widget Options</string>
+    <string name="search_bar_click_action">Search bar tap action</string>
+    <string name="search_bar_action_default">Supernova search</string>
+    <string name="search_bar_action_chrome">Google Chrome search</string>
+    <string name="search_bar_action_finder">Samsung Finder</string>
+    <string name="search_bar_chip_chrome">Google Chrome</string>
+    <string name="search_bar_chip_weather">Weather</string>
+    <string name="search_bar_colored_icons">Colored brand icons</string>
+    <string name="search_bar_colored_icons_summary">Show original multicolor icons for brand buttons</string>
+    <string name="home_screen_layout">Home screen layout</string>
+    <string name="home_and_apps_screens">Home and apps screens</string>
+    <string name="home_screen_only">Home screen only</string>
+    <string name="unlock_entrance_animation">Unlock entrance animation</string>
+    <string name="unlock_entrance_animation_summary">Smooth OneUI-style entrance animation when unlocking device</string>
+    <string name="style_group_surfaces_dark_default">Surfaces (Dark Default)</string>
+    <string name="style_group_surfaces_dark_amoled">Surfaces (Dark AMOLED)</string>
+    <string name="style_group_surfaces_light_default">Surfaces (Light Default)</string>
+    <string name="style_group_surfaces_light_frosted">Surfaces (Light Frosted)</string>
 </resources>

@@ -18,7 +18,7 @@ import kotlin.math.roundToInt
 
 // Paints IconGlass panes: IconRenderer's icons, and the home search bar's
 // pill (GlassPillDrawable). A pane fills width x height from the origin.
-class GlassPainter {
+class GlassPainter(var isDark: Boolean = false) {
 
     private val legacy = LegacyGlass(this)
 
@@ -139,10 +139,15 @@ class GlassPainter {
     fun drawPane(canvas: Canvas, glass: IconGlass, color: Int, width: Int, height: Int) {
         val right = width.toFloat()
         val bottom = height.toFloat()
-        val base = if (glass == IconGlass.SMOKED) IconGlass.SMOKE_COLOR else color
+        val base = when {
+            glass == IconGlass.SMOKED -> if (isDark) IconGlass.SMOKE_COLOR else 0xFF606670.toInt()
+            isDark -> ColorUtils.blendARGB(color, Color.BLACK, 0.45f)
+            else -> color
+        }
+        val hazeTarget = if (isDark && glass != IconGlass.SMOKED) 0xFF202020.toInt() else Color.WHITE
         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
         paint.color = ColorUtils.setAlphaComponent(
-            ColorUtils.blendARGB(base, Color.WHITE, glass.haze),
+            ColorUtils.blendARGB(base, hazeTarget, glass.haze),
             (glass.tintAlpha * OPAQUE).roundToInt()
         )
         canvas.drawRect(0f, 0f, right, bottom, paint)
@@ -152,14 +157,16 @@ class GlassPainter {
             paint.shader = BitmapShader(grainTile, Shader.TileMode.REPEAT, Shader.TileMode.REPEAT)
             canvas.drawRect(0f, 0f, right, bottom, paint)
         }
+        val sheenColor = if (isDark) white(glass.sheen * 0.4f) else white(glass.sheen)
+        val glowColor = if (isDark) white(glass.glow * 0.4f) else white(glass.glow)
         val sheenEnd = bottom * SHEEN_DEPTH
         paint.shader = LinearGradient(
-            0f, 0f, 0f, sheenEnd, white(glass.sheen), Color.TRANSPARENT, Shader.TileMode.CLAMP
+            0f, 0f, 0f, sheenEnd, sheenColor, Color.TRANSPARENT, Shader.TileMode.CLAMP
         )
         canvas.drawRect(0f, 0f, right, sheenEnd, paint)
         val glowStart = bottom * (1f - GLOW_DEPTH)
         paint.shader = LinearGradient(
-            0f, bottom, 0f, glowStart, white(glass.glow), Color.TRANSPARENT, Shader.TileMode.CLAMP
+            0f, bottom, 0f, glowStart, glowColor, Color.TRANSPARENT, Shader.TileMode.CLAMP
         )
         canvas.drawRect(0f, glowStart, right, bottom, paint)
     }

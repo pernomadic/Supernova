@@ -201,7 +201,10 @@ class ItemIcons(private val context: Context, private val viewModel: LauncherVie
             context.dp(ICON_DP),
             style = prefs.folderPreviewStyle,
             plateColor = FolderIconDrawable.plateColor(
-                prefs.folderMatchWindowColor, prefs.folderPlateColor, resolvedFolder.surface
+                prefs.folderMatchWindowColor, prefs.folderPlateColor, resolvedFolder.surface,
+                com.supernova.launcher.ui.theme.OneUiTheme.defaultFolderPlateColor(
+                    com.supernova.launcher.ui.theme.OneUiTheme.activeVariant(context, prefs)
+                )
             ),
             shape = FolderIconDrawable.plateShape(prefs.folderIconShape, prefs),
             customSpec = CustomShapeSpec.decode(prefs.iconShapeCustom),

@@ -174,6 +174,18 @@ object EnumLabels {
     }
 
     @StringRes
+    fun of(style: com.supernova.launcher.ui.theme.DarkStyle): Int = when (style) {
+        com.supernova.launcher.ui.theme.DarkStyle.DEFAULT -> R.string.style_default
+        com.supernova.launcher.ui.theme.DarkStyle.AMOLED -> R.string.style_amoled
+    }
+
+    @StringRes
+    fun of(style: com.supernova.launcher.ui.theme.LightStyle): Int = when (style) {
+        com.supernova.launcher.ui.theme.LightStyle.DEFAULT -> R.string.style_default
+        com.supernova.launcher.ui.theme.LightStyle.FROSTED -> R.string.style_frosted
+    }
+
+    @StringRes
     fun of(accent: AccentColor): Int = when (accent) {
         AccentColor.BLUE -> R.string.accent_blue
         AccentColor.INDIGO -> R.string.accent_indigo
@@ -210,6 +222,7 @@ object EnumLabels {
     fun of(mode: FolderMode): Int = when (mode) {
         FolderMode.WINDOW -> R.string.folder_mode_window
         FolderMode.IMMERSIVE -> R.string.folder_mode_immersive
+        FolderMode.ONEUI_FULLSCREEN -> R.string.folder_mode_oneui
     }
 
     @StringRes
@@ -386,5 +399,18 @@ object EnumLabels {
         LabelFont.CONDENSED -> R.string.font_condensed
         LabelFont.SERIF -> R.string.font_serif
         LabelFont.MONOSPACE -> R.string.font_monospace
+    }
+
+    @StringRes
+    fun of(action: com.supernova.launcher.ui.SearchBarTapAction): Int = when (action) {
+        com.supernova.launcher.ui.SearchBarTapAction.DEFAULT -> R.string.search_bar_action_default
+        com.supernova.launcher.ui.SearchBarTapAction.CHROME -> R.string.search_bar_action_chrome
+        com.supernova.launcher.ui.SearchBarTapAction.FINDER -> R.string.search_bar_action_finder
+    }
+
+    @StringRes
+    fun of(layout: com.supernova.launcher.data.HomeScreenLayout): Int = when (layout) {
+        com.supernova.launcher.data.HomeScreenLayout.HOME_AND_APPS -> R.string.home_and_apps_screens
+        com.supernova.launcher.data.HomeScreenLayout.HOME_ONLY -> R.string.home_screen_only
     }
 }

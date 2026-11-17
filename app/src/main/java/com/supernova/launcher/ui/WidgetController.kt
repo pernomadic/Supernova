@@ -876,13 +876,20 @@ class WidgetController(
     }
 
     fun isReconfigurable(item: LauncherItem): Boolean =
-        item.appWidgetId?.let(appWidgetManager::getAppWidgetInfo)?.let(WidgetFeatures::reconfigurable) == true
+        item.appWidgetId?.let(::isWidgetReconfigurable) == true
+
+    fun isWidgetReconfigurable(appWidgetId: Int): Boolean =
+        appWidgetManager.getAppWidgetInfo(appWidgetId)?.let(WidgetFeatures::reconfigurable) == true
 
     fun openWidgetSettings(item: LauncherItem) {
         val widgetId = item.appWidgetId ?: return
+        openWidgetSettings(widgetId)
+    }
+
+    fun openWidgetSettings(appWidgetId: Int) {
         val opened = runCatching {
             appWidgetHost.startAppWidgetConfigureActivityForResult(
-                activity, widgetId, 0, REQUEST_RECONFIGURE_WIDGET, PendingStarts.options()
+                activity, appWidgetId, 0, REQUEST_RECONFIGURE_WIDGET, PendingStarts.options()
             )
         }.isSuccess
         if (!opened) Toast.makeText(activity, R.string.widget_configure_failed, Toast.LENGTH_SHORT).show()

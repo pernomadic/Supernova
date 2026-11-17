@@ -21,7 +21,9 @@ import com.supernova.launcher.data.IconGlass
 // Painted once per size into a bitmap, so a frame only draws that.
 class GlassPillDrawable(
     private val glass: IconGlass,
-    private val radius: Float
+    private val radius: Float,
+    private val tintColor: Int = Color.WHITE,
+    private val isDark: Boolean = false
 ) : Drawable() {
 
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
@@ -45,7 +47,8 @@ class GlassPillDrawable(
             val corner = radius.coerceAtMost(minOf(width, height) / 2f)
             addRoundRect(RectF(0f, 0f, width.toFloat(), height.toFloat()), corner, corner, Path.Direction.CW)
         }
-        canvas.withClip(path) { painter.drawPane(this, glass, Color.WHITE, width, height) }
+        val painter = GlassPainter(isDark)
+        canvas.withClip(path) { painter.drawPane(this, glass, tintColor, width, height) }
         painter.drawEdge(canvas, path, glass, width, height)
         return bitmap
     }

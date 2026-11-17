@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Chrome outer wheel -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,2C6.48,2 2,6.48 2,12C2,17.52 6.48,22 12,22C17.52,22 22,17.52 22,12C22,6.48 17.52,2 12,2ZM12,4.08C15.65,4.08 18.73,6.58 19.64,10L12,10C10.9,10 10,10.9 10,12C10,12.18 10.02,12.35 10.07,12.52L6.87,7C8.16,5.21 10.22,4.08 12,4.08ZM4.08,12C4.08,9.45 5.23,7.18 7.02,5.69L10.22,11.23C9.47,11.83 9,12.75 9,13.79C9,14.07 9.04,14.34 9.11,14.6L5.05,12.26C4.43,12.18 4.08,12.09 4.08,12ZM12,19.92C9.45,19.92 7.18,18.77 5.69,16.98L9.75,9.95C10.35,10.7 11.27,11.17 12.31,11.17C13.41,11.17 14.31,10.27 14.31,9.17L18.37,16.2C16.88,18.52 14.28,19.92 12,19.92Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,8.5A3.5,3.5 0 1,0 12,15.5A3.5,3.5 0 1,0 12,8.5Z" />
+</vector>

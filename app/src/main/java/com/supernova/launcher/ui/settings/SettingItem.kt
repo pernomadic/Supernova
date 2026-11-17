@@ -198,6 +198,7 @@ sealed class SettingItem {
         @StringRes override val title: Int,
         val surface: com.supernova.launcher.ui.theme.SurfaceId,
         val onClick: () -> Unit,
+        val variant: com.supernova.launcher.ui.theme.ThemeStyleVariant? = null,
         override val visibleIf: (LauncherPrefs) -> Boolean = { true }
     ) : SettingItem()
 

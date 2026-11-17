@@ -43,7 +43,8 @@ object Styles {
         val folderBgColor: String,
         val drawerAlpha: Float,
         val dockAlpha: Float,
-        val generation: Int
+        val generation: Int,
+        val variant: String = ""
     )
 
     private var cachedKey: Key? = null
@@ -91,21 +92,28 @@ object Styles {
 
     @Synchronized
     fun resolve(context: Context, prefs: LauncherPrefs): ResolvedStyles {
-        val night = context.resources.configuration.uiMode and
-            Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+        val variant = OneUiTheme.activeVariant(context, prefs)
+        val night = variant.isDark
         val key = Key(
             prefs.styleConfig, prefs.paletteSource.name, prefs.paletteSeed, night,
             prefs.accentColor.name, prefs.drawerBgColor, prefs.folderBgColor,
-            prefs.drawerBgOpacity, prefs.dockBgOpacity, wallpaperGeneration
+            prefs.drawerBgOpacity, prefs.dockBgOpacity, wallpaperGeneration,
+            variant.name
         )
         cachedStyles?.let { if (key == cachedKey) return it }
 
         val palette = paletteFor(context, prefs, key)
         val config = StyleConfig.decode(prefs.styleConfig)
         val accent = ThemeEngine.accentColor(context, prefs.accentColor)
-        val themeText = context.getColor(R.color.textPrimary)
+        val darkBg = 0xFF0D1117.toInt()
+        val darkSurface = 0xFF1A2230.toInt()
+        val themeText = if (night) 0xFFFFFFFF.toInt() else context.getColor(R.color.textPrimary)
         val onWallpaper = context.getColor(R.color.onWallpaper)
-        val themeSurface = context.getColor(R.color.surface)
+        val themeSurface = if (night) {
+            if (variant == ThemeStyleVariant.DARK_AMOLED) OneUiTheme.AMOLED_BLACK else darkSurface
+        } else {
+            context.getColor(R.color.surface)
+        }
 
         fun resolved(
             id: SurfaceId,
@@ -118,8 +126,9 @@ object Styles {
             // in place of defaultText; null keeps defaultText.
             textFor: ((surfaceBase: Int, alpha: Float) -> Int)? = null
         ): ResolvedSurface {
-            val style = config.styleFor(id)
-            val surfaceBase = colorFor(style.surface, palette) ?: defaultSurface
+            val style = config.styleFor(id, variant)
+            val fallbackWithVariant = OneUiTheme.defaultSurfaceColor(variant, id, defaultSurface)
+            val surfaceBase = colorFor(style.surface, palette) ?: fallbackWithVariant
             val alpha = style.alpha ?: defaultAlpha
             val surface = if (alpha != null) {
                 ((alpha.coerceIn(0f, 1f) * 255).toInt() shl 24) or (surfaceBase and 0x00FFFFFF)
@@ -141,7 +150,9 @@ object Styles {
         }
 
         val drawerLegacy = LabelStyler.parseColor(
-            prefs.drawerBgColor, context.getColor(R.color.drawerBackground)
+            prefs.drawerBgColor,
+            if (night) (if (variant == ThemeStyleVariant.DARK_AMOLED) OneUiTheme.AMOLED_BLACK else 0xFF1E2735.toInt())
+            else context.getColor(R.color.drawerBackground)
         )
         // The FOLDER surface colors the folder *window*, so its default is the
         // opaque theme surface; the translucent preview-plate default lives in
@@ -157,7 +168,7 @@ object Styles {
         )
 
         val popup = resolved(SurfaceId.POPUP, themeSurface, themeText, null)
-        val cardsText = cardText(config, onWallpaper)
+        val cardsText = cardText(config, onWallpaper, variant)
         val cards = resolved(SurfaceId.CARDS, popup.surface, popup.text, null, popup.accent, cardsText)
 
         val styles = ResolvedStyles(
@@ -181,7 +192,10 @@ object Styles {
                     SurfaceId.SEARCH_BAR, themeSurface, themeText, null
                 ),
                 SurfaceId.SETTINGS to resolved(
-                    SurfaceId.SETTINGS, context.getColor(R.color.background), themeText, null
+                    SurfaceId.SETTINGS,
+                    if (night) (if (variant == ThemeStyleVariant.DARK_AMOLED) OneUiTheme.AMOLED_BLACK else darkBg)
+                    else context.getColor(R.color.background),
+                    themeText, null
                 ),
                 SurfaceId.HOME to resolved(
                     SurfaceId.HOME, android.graphics.Color.TRANSPARENT, onWallpaper, null
@@ -196,8 +210,8 @@ object Styles {
     // Cards wear the popup's colours until styled themselves. Once their
     // color or opacity is set, the text follows the plate (dark on a light
     // one), and the wallpaper's once the plate barely covers it.
-    private fun cardText(config: StyleConfig, onWallpaper: Int): ((Int, Float) -> Int)? =
-        if (config.styleFor(SurfaceId.CARDS).let { it.surface.isDefault && it.alpha == null }) {
+    private fun cardText(config: StyleConfig, onWallpaper: Int, variant: ThemeStyleVariant? = null): ((Int, Float) -> Int)? =
+        if (config.styleFor(SurfaceId.CARDS, variant).let { it.surface.isDefault && it.alpha == null }) {
             null
         } else {
             { base, alpha -> drawerText(base, alpha, onWallpaper) }

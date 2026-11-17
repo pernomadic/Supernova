@@ -383,6 +383,13 @@ data class LauncherPrefs(
     // Badge folder icons with the summed unread count of their members.
     val folderBadges: Boolean = false,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val darkStyle: com.supernova.launcher.ui.theme.DarkStyle = com.supernova.launcher.ui.theme.DarkStyle.DEFAULT,
+    val lightStyle: com.supernova.launcher.ui.theme.LightStyle = com.supernova.launcher.ui.theme.LightStyle.DEFAULT,
+    val glassFollowsTheme: Boolean = true,
+    val homeScreenLayout: HomeScreenLayout = HomeScreenLayout.HOME_AND_APPS,
+    val searchBarTapAction: com.supernova.launcher.ui.SearchBarTapAction = com.supernova.launcher.ui.SearchBarTapAction.DEFAULT,
+    val searchBarColoredIcons: Boolean = false,
+    val unlockEntranceAnimation: Boolean = false,
     // SCHEDULE mode's dark window, minutes since midnight; end < start wraps
     // past midnight (defaults: 19:00-07:00).
     val themeScheduleStart: Int = 1140,

@@ -399,9 +399,10 @@ class AppCatalog(
         dominantColors.clear()
     }
 
-    fun applyIconGlass(value: IconGlass) = synchronized(renderLock) {
-        if (iconRenderer.glass == value) return
+    fun applyIconGlass(value: IconGlass, isDark: Boolean = false) = synchronized(renderLock) {
+        if (iconRenderer.glass == value && iconRenderer.isDark == isDark) return
         iconRenderer.glass = value
+        iconRenderer.isDark = isDark
         iconCache.evictAll()
         dominantColors.clear()
     }

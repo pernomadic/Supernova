@@ -83,7 +83,7 @@ object SettingsCatalogue {
         val editBadgedApps: () -> Unit = {},
         val postTestBadge: () -> Unit = {},
         val openPaletteDialog: () -> Unit = {},
-        val openStylePicker: (SurfaceId) -> Unit = {},
+        val openStylePicker: (SurfaceId, com.supernova.launcher.ui.theme.ThemeStyleVariant?) -> Unit = { _, _ -> },
         val showAutoBackups: () -> Unit = {},
         val exportBackup: () -> Unit = {},
         val importBackup: () -> Unit = {},
@@ -383,6 +383,19 @@ object SettingsCatalogue {
             listOfNotNull(
                 SettingItem.Preview(PreviewKind.HOME),
                 SettingItem.Header(R.string.group_layout),
+                rows.choice(
+                    R.string.home_screen_layout,
+                    com.supernova.launcher.data.HomeScreenLayout.entries,
+                    { it.homeScreenLayout },
+                    { layout ->
+                        when (layout) {
+                            com.supernova.launcher.data.HomeScreenLayout.HOME_AND_APPS -> R.string.home_and_apps_screens
+                            com.supernova.launcher.data.HomeScreenLayout.HOME_ONLY -> R.string.home_screen_only
+                        }
+                    }
+                ) { layout ->
+                    viewModel.setHomeScreenLayout(layout)
+                },
                 // The Home screen's Layout group opens with the desktop's
                 // icon size and its Label card. The dock, drawer and folders
                 // follow both unless they are given their own.
@@ -469,6 +482,12 @@ object SettingsCatalogue {
                     R.string.launch_animation, LaunchAnimation.entries,
                     { it.launchAnimation }, { EnumLabels.of(it) },
                     onPick = { viewModel.set(Pref.launchAnimation, it) }
+                ).hiddenWhen(animationsHidden),
+                SettingItem.Toggle(
+                    R.string.unlock_entrance_animation,
+                    get = { it.unlockEntranceAnimation },
+                    set = { viewModel.set(Pref.unlockEntranceAnimation, it) },
+                    subtitle = R.string.unlock_entrance_animation_summary
                 ).hiddenWhen(animationsHidden),
                 SettingItem.Toggle(
                     R.string.drop_targets,
@@ -1106,6 +1125,18 @@ object SettingsCatalogue {
             listOf(
                 SettingItem.Preview(PreviewKind.SEARCH_BAR),
                 desktopBarPlacement(R.string.search_bar_placement),
+                rows.choice(
+                    R.string.search_bar_click_action,
+                    com.supernova.launcher.ui.SearchBarTapAction.entries,
+                    { it.searchBarTapAction },
+                    { action ->
+                        when (action) {
+                            com.supernova.launcher.ui.SearchBarTapAction.DEFAULT -> R.string.search_bar_action_default
+                            com.supernova.launcher.ui.SearchBarTapAction.CHROME -> R.string.search_bar_action_chrome
+                            com.supernova.launcher.ui.SearchBarTapAction.FINDER -> R.string.search_bar_action_finder
+                        }
+                    }
+                ) { action -> viewModel.set(Pref.searchBarTapAction, action) },
                 SettingItem.Header(R.string.group_appearance),
                 SettingItem.Slider(
                     R.string.style_corner_radius, min = 0, max = DesktopSearchBarConfig.MAX_RADIUS, step = 2,
@@ -1144,7 +1175,13 @@ object SettingsCatalogue {
                     get = { SearchBarPrefs.desktopBar(it).hint },
                     set = { on -> rows.editDesktopBar { it.copy(hint = on) } }
                 ),
-                SettingItem.Header(R.string.search_bar_chips)
+                SettingItem.Header(R.string.search_bar_chips),
+                SettingItem.Toggle(
+                    R.string.search_bar_colored_icons,
+                    get = { it.searchBarColoredIcons },
+                    set = { on -> viewModel.set(Pref.searchBarColoredIcons, on) },
+                    subtitle = R.string.search_bar_colored_icons_summary
+                )
                 // The same buttons as the drawer field's, in the same order.
             ) + SearchBarButtons.ROWS.map(rows::barChip)
         ),
@@ -1278,7 +1315,7 @@ object SettingsCatalogue {
                 // The cards' color and opacity: the Style tab's Cards row.
                 add(
                     SettingItem.StyleTarget(
-                        R.string.feed_card_colors, SurfaceId.CARDS, { actions.openStylePicker(SurfaceId.CARDS) }
+                        R.string.feed_card_colors, SurfaceId.CARDS, { actions.openStylePicker(SurfaceId.CARDS, null) }
                     ).hiddenWhen(feedHidden)
                 )
             }
@@ -1447,6 +1484,12 @@ object SettingsCatalogue {
                     R.string.icon_glass, com.supernova.launcher.data.IconGlass.entries,
                     { it.iconGlass }, { EnumLabels.of(it) },
                     onPick = { viewModel.set(Pref.iconGlass, it) }
+                ),
+                SettingItem.Toggle(
+                    R.string.glass_follows_theme,
+                    get = { it.glassFollowsTheme },
+                    set = { viewModel.set(Pref.glassFollowsTheme, it) },
+                    subtitle = R.string.glass_follows_theme_summary
                 ),
                 // Bulk undo for per-app and per-folder icon picks.
                 SettingItem.Row(
@@ -1863,6 +1906,14 @@ object SettingsCatalogue {
                 R.string.theme_mode, ThemeMode.entries,
                 { it.themeMode }, { EnumLabels.of(it) }
             ) { viewModel.set(Pref.themeMode, it) }.withLook(SettingItem.RowLook(R.drawable.ic_style_theme)),
+            rows.choice(
+                R.string.dark_style, com.supernova.launcher.ui.theme.DarkStyle.entries,
+                { it.darkStyle }, { EnumLabels.of(it) }
+            ) { viewModel.set(Pref.darkStyle, it) },
+            rows.choice(
+                R.string.light_style, com.supernova.launcher.ui.theme.LightStyle.entries,
+                { it.lightStyle }, { EnumLabels.of(it) }
+            ) { viewModel.set(Pref.lightStyle, it) },
             SettingItem.Row(
                 R.string.theme_schedule_times,
                 subtitle = {
@@ -1874,28 +1925,26 @@ object SettingsCatalogue {
                 onClick = actions.editThemeSchedule,
                 look = SettingItem.RowLook(R.drawable.ic_style_schedule)
             ).hiddenWhen { dependsOn(R.string.theme_mode, it.themeMode != ThemeMode.SCHEDULE) },
-            accentRow(context, viewModel, actions),
-            SettingItem.Header(R.string.style_group_surfaces),
-            SettingItem.StyleTarget(
-                R.string.settings_section_home, SurfaceId.HOME, { actions.openStylePicker(SurfaceId.HOME) }
-            ),
-            SettingItem.StyleTarget(R.string.settings_section_drawer, SurfaceId.DRAWER, { actions.openStylePicker(SurfaceId.DRAWER) }),
-            SettingItem.StyleTarget(R.string.settings_section_dock, SurfaceId.DOCK, { actions.openStylePicker(SurfaceId.DOCK) }),
-            SettingItem.StyleTarget(R.string.settings_section_folders, SurfaceId.FOLDER, { actions.openStylePicker(SurfaceId.FOLDER) }),
-            SettingItem.StyleTarget(R.string.style_popup, SurfaceId.POPUP, { actions.openStylePicker(SurfaceId.POPUP) }),
-            SettingItem.StyleTarget(
-                R.string.style_cards, SurfaceId.CARDS, { actions.openStylePicker(SurfaceId.CARDS) }
-            ),
-            SettingItem.StyleTarget(
-                R.string.desktop_search_bar, SurfaceId.SEARCH_BAR,
-                { actions.openStylePicker(SurfaceId.SEARCH_BAR) }
-            ),
-            SettingItem.StyleTarget(
-                R.string.drawer_search_bar, SurfaceId.DRAWER_SEARCH_BAR,
-                { actions.openStylePicker(SurfaceId.DRAWER_SEARCH_BAR) }
-            ),
-            SettingItem.StyleTarget(R.string.settings, SurfaceId.SETTINGS, { actions.openStylePicker(SurfaceId.SETTINGS) })
-        )
+            accentRow(context, viewModel, actions)
+        ) + listOf(
+            com.supernova.launcher.ui.theme.ThemeStyleVariant.DARK_DEFAULT to R.string.style_group_surfaces_dark_default,
+            com.supernova.launcher.ui.theme.ThemeStyleVariant.DARK_AMOLED to R.string.style_group_surfaces_dark_amoled,
+            com.supernova.launcher.ui.theme.ThemeStyleVariant.LIGHT_DEFAULT to R.string.style_group_surfaces_light_default,
+            com.supernova.launcher.ui.theme.ThemeStyleVariant.LIGHT_FROSTED to R.string.style_group_surfaces_light_frosted
+        ).flatMap { (variant, headerRes) ->
+            listOf(
+                SettingItem.Header(headerRes),
+                SettingItem.StyleTarget(R.string.settings_section_home, SurfaceId.HOME, { actions.openStylePicker(SurfaceId.HOME, variant) }, variant),
+                SettingItem.StyleTarget(R.string.settings_section_drawer, SurfaceId.DRAWER, { actions.openStylePicker(SurfaceId.DRAWER, variant) }, variant),
+                SettingItem.StyleTarget(R.string.settings_section_dock, SurfaceId.DOCK, { actions.openStylePicker(SurfaceId.DOCK, variant) }, variant),
+                SettingItem.StyleTarget(R.string.settings_section_folders, SurfaceId.FOLDER, { actions.openStylePicker(SurfaceId.FOLDER, variant) }, variant),
+                SettingItem.StyleTarget(R.string.style_popup, SurfaceId.POPUP, { actions.openStylePicker(SurfaceId.POPUP, variant) }, variant),
+                SettingItem.StyleTarget(R.string.style_cards, SurfaceId.CARDS, { actions.openStylePicker(SurfaceId.CARDS, variant) }, variant),
+                SettingItem.StyleTarget(R.string.desktop_search_bar, SurfaceId.SEARCH_BAR, { actions.openStylePicker(SurfaceId.SEARCH_BAR, variant) }, variant),
+                SettingItem.StyleTarget(R.string.drawer_search_bar, SurfaceId.DRAWER_SEARCH_BAR, { actions.openStylePicker(SurfaceId.DRAWER_SEARCH_BAR, variant) }, variant),
+                SettingItem.StyleTarget(R.string.settings, SurfaceId.SETTINGS, { actions.openStylePicker(SurfaceId.SETTINGS, variant) }, variant)
+            )
+        }
     )
     }
 

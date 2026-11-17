@@ -22,6 +22,7 @@
 
         <!-- The title sits under the grid, at the foot of the card. -->
         <LinearLayout
+            android:id="@+id/folderBottomBar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
@@ -78,4 +79,44 @@
                 android:visibility="gone" />
         </LinearLayout>
     </LinearLayout>
+
+    <EditText
+        android:id="@+id/oneUiTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|center_horizontal"
+        android:background="@android:color/transparent"
+        android:gravity="center"
+        android:hint="@string/folder_name"
+        android:imeOptions="actionDone"
+        android:importantForAutofill="no"
+        android:inputType="textCapWords"
+        android:maxLength="@integer/label_max_length"
+        android:maxLines="1"
+        android:paddingHorizontal="@dimen/space_sm"
+        android:paddingVertical="@dimen/space_sm"
+        android:textColor="@color/textPrimary"
+        android:textColorHint="@color/textSecondary"
+        android:textSize="32sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
+
+    <ImageView
+        android:id="@+id/oneUiAddButton"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/select_apps"
+        android:src="@drawable/ic_oneui_add_circle"
+        app:tint="@color/textPrimary"
+        android:visibility="gone" />
+
+    <LinearLayout
+        android:id="@+id/oneUiPageIndicator"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:visibility="gone" />
 </FrameLayout>

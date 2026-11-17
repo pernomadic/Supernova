@@ -54,15 +54,33 @@ data class SurfaceStyle(
 // rendering exactly.
 @Serializable
 data class StyleConfig(
-    val surfaces: Map<SurfaceId, SurfaceStyle> = emptyMap()
+    val surfaces: Map<SurfaceId, SurfaceStyle> = emptyMap(),
+    val variantSurfaces: Map<String, Map<SurfaceId, SurfaceStyle>> = emptyMap()
 ) {
 
-    fun styleFor(id: SurfaceId): SurfaceStyle = surfaces[id] ?: EMPTY_SURFACE
+    fun styleFor(id: SurfaceId, variant: ThemeStyleVariant? = null): SurfaceStyle {
+        if (variant != null) {
+            variantSurfaces[variant.storageKey]?.get(id)?.let { return it }
+        }
+        return surfaces[id] ?: EMPTY_SURFACE
+    }
 
-    fun with(id: SurfaceId, style: SurfaceStyle): StyleConfig =
-        if (style.isEmpty()) StyleConfig(surfaces - id) else StyleConfig(surfaces + (id to style))
+    fun with(id: SurfaceId, style: SurfaceStyle, variant: ThemeStyleVariant? = null): StyleConfig {
+        if (variant == null) {
+            val updated = if (style.isEmpty()) surfaces - id else surfaces + (id to style)
+            return copy(surfaces = updated)
+        }
+        val currentVariantMap = variantSurfaces[variant.storageKey].orEmpty()
+        val updatedVariantMap = if (style.isEmpty()) currentVariantMap - id else currentVariantMap + (id to style)
+        val newVariants = if (updatedVariantMap.isEmpty()) {
+            variantSurfaces - variant.storageKey
+        } else {
+            variantSurfaces + (variant.storageKey to updatedVariantMap)
+        }
+        return copy(variantSurfaces = newVariants)
+    }
 
-    fun encode(): String = if (surfaces.isEmpty()) "" else json.encodeToString(serializer(), this)
+    fun encode(): String = if (surfaces.isEmpty() && variantSurfaces.isEmpty()) "" else json.encodeToString(serializer(), this)
 
     companion object {
         private val json = Json {

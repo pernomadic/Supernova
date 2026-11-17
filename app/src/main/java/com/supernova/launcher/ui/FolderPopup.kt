@@ -73,8 +73,13 @@ class FolderPopup(private val context: Context) {
         // the card takes focus and would drop it a step late otherwise.
         anchor.hideKeyboardForWindow()
 
+        val isOneUi = mode == FolderMode.ONEUI_FULLSCREEN
+        val hideAnchor = mode == FolderMode.IMMERSIVE || isOneUi
+        if (hideAnchor) anchor.alpha = 0f
+
         val binding = PopupFolderBinding.inflate(LayoutInflater.from(context))
         binding.folderTitle.setText(title)
+        binding.oneUiTitle.setText(title)
 
         if (cornerRadiiDp != null) {
             // Style-engine corners replace the stock drawable outright.
@@ -82,7 +87,14 @@ class FolderPopup(private val context: Context) {
             binding.folderCard.background = com.supernova.launcher.ui.theme.SurfaceShapes.background(
                 surfaceColor ?: context.getColor(com.supernova.launcher.R.color.drawerBackground),
                 FloatArray(4) { cornerRadiiDp[it] * density },
-                context.dp(24).toFloat()
+                context.dp(if (isOneUi) 28 else 24).toFloat()
+            )
+        } else if (isOneUi) {
+            val density = context.resources.displayMetrics.density
+            binding.folderCard.background = com.supernova.launcher.ui.theme.SurfaceShapes.background(
+                surfaceColor ?: context.getColor(com.supernova.launcher.R.color.drawerBackground),
+                FloatArray(4) { 28f * density },
+                context.dp(28).toFloat()
             )
         } else {
             surfaceColor?.let { color ->
@@ -98,52 +110,106 @@ class FolderPopup(private val context: Context) {
         binding.folderTitle.setHintTextColor(androidx.core.graphics.ColorUtils.setAlphaComponent(text, HINT_ALPHA))
         binding.folderCount.setTextColor(androidx.core.graphics.ColorUtils.setAlphaComponent(text, COUNT_ALPHA))
         binding.folderEditButton.imageTintList = android.content.res.ColorStateList.valueOf(text)
-        binding.folderTitle.visibility = if (showTitle) View.VISIBLE else View.GONE
-        if (!titleEditable) {
-            binding.folderTitle.apply {
-                isFocusable = false
-                isFocusableInTouchMode = false
-                isLongClickable = false
-                isCursorVisible = false
-                keyListener = null
+        binding.folderTitle.visibility = if (showTitle && !isOneUi) View.VISIBLE else View.GONE
+        if (isOneUi) {
+            binding.folderBottomBar.visibility = View.GONE
+            binding.oneUiTitle.visibility = if (showTitle) View.VISIBLE else View.GONE
+            binding.oneUiTitle.setTextColor(text)
+            binding.oneUiTitle.setHintTextColor(androidx.core.graphics.ColorUtils.setAlphaComponent(text, HINT_ALPHA))
+            if (onMenu != null) {
+                binding.oneUiAddButton.visibility = View.VISIBLE
+                binding.oneUiAddButton.imageTintList = android.content.res.ColorStateList.valueOf(text)
+                binding.oneUiAddButton.setOnClickListener { onMenu(it) }
             }
+        }
+        if (!titleEditable) {
+            val uneditable: (android.widget.EditText) -> Unit = {
+                it.isFocusable = false
+                it.isFocusableInTouchMode = false
+                it.isLongClickable = false
+                it.isCursorVisible = false
+                it.keyListener = null
+            }
+            uneditable(binding.folderTitle)
+            uneditable(binding.oneUiTitle)
         }
 
         val immersive = mode == FolderMode.IMMERSIVE
         val metrics = context.resources.displayMetrics
         val cellWidth = cellWidthPx(context, adapter.iconScale)
-        val columns = columnsFor(context, members.size, columnsOverride, immersive, adapter.iconScale)
+        val columns = if (isOneUi) 4 else columnsFor(context, members.size, columnsOverride, immersive, adapter.iconScale)
 
         // Cells are wide enough for a typical label at 12sp, and the grid
         // width is fixed so GridLayoutManager centres each tile in its span
         // instead of packing wrap_content tiles against the left edge.
-        val gridWidth = min(columns * cellWidth, metrics.widthPixels - context.dp(48))
+        val gridWidth = if (isOneUi) {
+            metrics.widthPixels - context.dp(40)
+        } else {
+            min(columns * cellWidth, metrics.widthPixels - context.dp(48))
+        }
         val rowsNeeded = ceil(members.size / columns.toFloat()).toInt().coerceAtLeast(1)
         // Window folders cap at ~60% of the screen so long folders scroll;
         // immersive gets most of the height.
         val maxGridHeight = (metrics.heightPixels * if (immersive) 0.72f else 0.6f).toInt()
         adapter.cellWidthPx = gridWidth / columns
 
-        when (scroll) {
-            FolderScroll.VERTICAL -> {
-                binding.folderGrid.layoutManager = GridLayoutManager(context, columns)
-                // Content-sized up to the cap, scrolling beyond it.
-                binding.folderGrid.maxHeight = maxGridHeight
-                binding.folderGrid.layoutParams = binding.folderGrid.layoutParams.apply {
-                    width = gridWidth
+        var onPageChange: ((Int) -> Unit)? = null
+        if (isOneUi) {
+            val cellHeight = measureCellHeight(adapter, members, gridWidth / columns)
+            val fixedRows = 4
+            val fixedHeight = fixedRows * cellHeight
+            binding.folderGrid.layoutManager = PagedGridLayoutManager(columns, fixedRows)
+            binding.folderGrid.layoutParams = binding.folderGrid.layoutParams.apply {
+                width = gridWidth
+                height = fixedHeight
+            }
+            val totalPages = ceil(members.size / 16f).toInt().coerceAtLeast(1)
+            fun updateDots(page: Int) {
+                if (totalPages <= 1) {
+                    binding.oneUiPageIndicator.visibility = View.GONE
+                    return
+                }
+                binding.oneUiPageIndicator.visibility = View.VISIBLE
+                binding.oneUiPageIndicator.removeAllViews()
+                for (i in 0 until totalPages) {
+                    val dot = View(context).apply {
+                        val size = context.dp(6)
+                        layoutParams = android.widget.LinearLayout.LayoutParams(size, size).apply {
+                            setMargins(context.dp(3), 0, context.dp(3), 0)
+                        }
+                        background = GradientDrawable().apply {
+                            shape = GradientDrawable.OVAL
+                            setColor(if (i == page) text else androidx.core.graphics.ColorUtils.setAlphaComponent(text, 0x55))
+                        }
+                    }
+                    binding.oneUiPageIndicator.addView(dot)
                 }
             }
-            FolderScroll.HORIZONTAL -> {
-                val cellHeight = measureCellHeight(adapter, members, gridWidth / columns)
-                val visibleRows = rowsNeeded.coerceAtMost((maxGridHeight / cellHeight).coerceAtLeast(1))
-                // Pages filled row by row, the order the preview reads.
-                binding.folderGrid.layoutManager = PagedGridLayoutManager(columns, visibleRows)
-                // Fixed viewport so paging has a page to snap to.
-                binding.folderGrid.layoutParams = binding.folderGrid.layoutParams.apply {
-                    width = gridWidth
-                    height = visibleRows * cellHeight
+            updateDots(0)
+            onPageChange = { page -> updateDots(page) }
+            attachColumnPaging(binding.folderGrid, gridWidth, smooth = animate, onPage = onPageChange)
+        } else {
+            when (scroll) {
+                FolderScroll.VERTICAL -> {
+                    binding.folderGrid.layoutManager = GridLayoutManager(context, columns)
+                    // Content-sized up to the cap, scrolling beyond it.
+                    binding.folderGrid.maxHeight = maxGridHeight
+                    binding.folderGrid.layoutParams = binding.folderGrid.layoutParams.apply {
+                        width = gridWidth
+                    }
                 }
-                attachColumnPaging(binding.folderGrid, gridWidth, smooth = animate)
+                FolderScroll.HORIZONTAL -> {
+                    val cellHeight = measureCellHeight(adapter, members, gridWidth / columns)
+                    val visibleRows = rowsNeeded.coerceAtMost((maxGridHeight / cellHeight).coerceAtLeast(1))
+                    // Pages filled row by row, the order the preview reads.
+                    binding.folderGrid.layoutManager = PagedGridLayoutManager(columns, visibleRows)
+                    // Fixed viewport so paging has a page to snap to.
+                    binding.folderGrid.layoutParams = binding.folderGrid.layoutParams.apply {
+                        width = gridWidth
+                        height = visibleRows * cellHeight
+                    }
+                    attachColumnPaging(binding.folderGrid, gridWidth, smooth = animate)
+                }
             }
         }
 
@@ -198,12 +264,27 @@ class FolderPopup(private val context: Context) {
 
         // The root always fills the window so the card can expand from the
         // icon underneath it; WINDOW mode just keeps the scrim transparent.
-        if (immersive) binding.folderScrim.setBackgroundColor(IMMERSIVE_SCRIM)
+        if (immersive) {
+            binding.folderScrim.setBackgroundColor(IMMERSIVE_SCRIM)
+        } else if (isOneUi) {
+            val isDarkTheme = androidx.core.graphics.ColorUtils.calculateLuminance(text) > 0.5
+            val scrimColor = if (isDarkTheme) 0xD9000000.toInt() else 0xCCF2F2F2.toInt()
+            binding.folderScrim.setBackgroundColor(scrimColor)
+        }
         binding.folderCard.layoutParams = FrameLayout.LayoutParams(
             if (immersive) ViewGroup.LayoutParams.MATCH_PARENT else ViewGroup.LayoutParams.WRAP_CONTENT,
             ViewGroup.LayoutParams.WRAP_CONTENT,
-            if (immersive) Gravity.CENTER else Gravity.TOP or Gravity.START
-        ).apply { if (immersive) setMargins(context.dp(24), context.dp(24), context.dp(24), context.dp(24)) }
+            when {
+                immersive -> Gravity.CENTER
+                isOneUi -> Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+                else -> Gravity.TOP or Gravity.START
+            }
+        ).apply {
+            when {
+                immersive -> setMargins(context.dp(24), context.dp(24), context.dp(24), context.dp(24))
+                isOneUi -> setMargins(context.dp(20), 0, context.dp(20), (metrics.heightPixels * 0.08f).toInt())
+            }
+        }
         // The card swallows taps; only true outside taps reach the scrim.
         binding.folderCard.isClickable = true
 
@@ -217,6 +298,7 @@ class FolderPopup(private val context: Context) {
         var closing = false
         fun animateClose() {
             if (closing) return
+            if (hideAnchor) anchor.alpha = 1f
             if (!animate) {
                 popup.dismiss()
                 return
@@ -265,8 +347,9 @@ class FolderPopup(private val context: Context) {
         }
 
         popup.setOnDismissListener {
-            val newName = binding.folderTitle.text?.toString().orEmpty()
+            val newName = (if (isOneUi) binding.oneUiTitle.text else binding.folderTitle.text)?.toString().orEmpty()
             if (newName.isNotBlank() && newName != title) onRename(newName)
+            if (hideAnchor) anchor.alpha = 1f
             onDismiss?.invoke()
         }
 
@@ -280,6 +363,7 @@ class FolderPopup(private val context: Context) {
         }
 
         fun startExpand(card: View) {
+            if (hideAnchor) anchor.alpha = 0f
             binding.root.animate().alpha(1f).setDuration((SCRIM_MS * speed).toLong()).start()
             if (!animate) return
             val anchorAt = IntArray(2).also(anchor::getLocationOnScreen)
@@ -305,7 +389,29 @@ class FolderPopup(private val context: Context) {
         }
 
         binding.folderCard.doOnLayout { card ->
-            if (!immersive) {
+            if (isOneUi) {
+                val cardTop = card.top
+                val cardRight = card.right
+                val titleParams = binding.oneUiTitle.layoutParams as? FrameLayout.LayoutParams
+                titleParams?.apply {
+                    topMargin = (metrics.heightPixels * 0.14f).toInt()
+                }
+                binding.oneUiTitle.layoutParams = titleParams
+                val addParams = binding.oneUiAddButton.layoutParams as? FrameLayout.LayoutParams
+                addParams?.apply {
+                    gravity = Gravity.TOP or Gravity.START
+                    leftMargin = cardRight - context.dp(44)
+                    topMargin = (cardTop - context.dp(52)).coerceAtLeast(context.dp(16))
+                }
+                binding.oneUiAddButton.layoutParams = addParams
+                val dotsParams = binding.oneUiPageIndicator.layoutParams as? FrameLayout.LayoutParams
+                dotsParams?.apply {
+                    gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+                    bottomMargin = (metrics.heightPixels * 0.035f).toInt()
+                }
+                binding.oneUiPageIndicator.layoutParams = dotsParams
+                restingY = card.translationY
+            } else if (!immersive) {
                 // The folder expands in place: the card sits centred
                 // over its own icon, clamped inside the screen with a small
                 // margin. Positioned via translation - a margin change here
@@ -345,7 +451,8 @@ class FolderPopup(private val context: Context) {
     private fun attachColumnPaging(
         grid: androidx.recyclerview.widget.RecyclerView,
         pageWidth: Int,
-        smooth: Boolean
+        smooth: Boolean,
+        onPage: ((Int) -> Unit)? = null
     ) {
         if (pageWidth <= 0) return
         // With animations off a page lands at once.
@@ -358,7 +465,9 @@ class FolderPopup(private val context: Context) {
                 val offset = grid.computeHorizontalScrollOffset()
                 val page = offset / pageWidth
                 val target = (if (velocityX > 0) page + 1 else page) * pageWidth
-                scrollBy(grid, target.coerceIn(0, maxOffset(grid)) - offset)
+                val clamped = target.coerceIn(0, maxOffset(grid))
+                scrollBy(grid, clamped - offset)
+                onPage?.invoke((clamped / pageWidth).coerceAtLeast(0))
                 return true
             }
         }
@@ -369,6 +478,7 @@ class FolderPopup(private val context: Context) {
                 val offset = rv.computeHorizontalScrollOffset()
                 val target = (((offset + pageWidth / 2) / pageWidth) * pageWidth).coerceIn(0, maxOffset(rv))
                 if (target != offset) scrollBy(rv, target - offset)
+                onPage?.invoke((target / pageWidth).coerceAtLeast(0))
             }
         })
     }
@@ -442,9 +552,8 @@ class FolderPopup(private val context: Context) {
         // Room left between the card's title row and the keyboard's top.
         private const val KEYBOARD_GAP_DP = 12
 
-        // Material fast-out-slow-in out, and its accelerating counterpart
-        // for collapsing back into the icon.
-        private val EXPAND = PathInterpolator(0.4f, 0f, 0.2f, 1f)
-        private val COLLAPSE = PathInterpolator(0.4f, 0f, 1f, 1f)
+        // OneUI smooth spring-like curve and soft collapse curve.
+        private val EXPAND = PathInterpolator(0.22f, 0.25f, 0f, 1f)
+        private val COLLAPSE = PathInterpolator(0.25f, 0f, 0.22f, 1f)
     }
 }

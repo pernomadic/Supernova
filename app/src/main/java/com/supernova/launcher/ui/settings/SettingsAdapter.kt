@@ -610,8 +610,19 @@ class SettingsAdapter(private val previews: PreviewController) : RecyclerView.Ad
     ) : RecyclerView.ViewHolder(binding.root) {
         fun bind(item: SettingItem.StyleTarget, prefs: LauncherPrefs) {
             binding.settingTitle.setText(item.title)
+            val variantPrefs = when (item.variant) {
+                com.supernova.launcher.ui.theme.ThemeStyleVariant.DARK_DEFAULT ->
+                    prefs.copy(themeMode = com.supernova.launcher.ui.theme.ThemeMode.DARK, darkStyle = com.supernova.launcher.ui.theme.DarkStyle.DEFAULT)
+                com.supernova.launcher.ui.theme.ThemeStyleVariant.DARK_AMOLED ->
+                    prefs.copy(themeMode = com.supernova.launcher.ui.theme.ThemeMode.DARK, darkStyle = com.supernova.launcher.ui.theme.DarkStyle.AMOLED)
+                com.supernova.launcher.ui.theme.ThemeStyleVariant.LIGHT_DEFAULT ->
+                    prefs.copy(themeMode = com.supernova.launcher.ui.theme.ThemeMode.LIGHT, lightStyle = com.supernova.launcher.ui.theme.LightStyle.DEFAULT)
+                com.supernova.launcher.ui.theme.ThemeStyleVariant.LIGHT_FROSTED ->
+                    prefs.copy(themeMode = com.supernova.launcher.ui.theme.ThemeMode.LIGHT, lightStyle = com.supernova.launcher.ui.theme.LightStyle.FROSTED)
+                null -> prefs
+            }
             val resolved = com.supernova.launcher.ui.theme.Styles
-                .resolve(binding.root.context, prefs).of(item.surface)
+                .resolve(binding.root.context, variantPrefs).of(item.surface)
             val density = binding.root.resources.displayMetrics.density
             binding.styleStrip.background = com.supernova.launcher.ui.theme.SurfaceShapes.background(
                 resolved.surface,

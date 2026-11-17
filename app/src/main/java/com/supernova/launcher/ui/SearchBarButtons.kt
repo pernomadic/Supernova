@@ -27,7 +27,8 @@ object SearchBarButtons {
 
     // How both bars' settings pages list them.
     val ROWS = listOf(
-        SearchBarChip.DATE, SearchBarChip.ASSISTANT, SearchBarChip.PLAY_STORE,
+        SearchBarChip.DATE, SearchBarChip.WEATHER, SearchBarChip.CHROME,
+        SearchBarChip.PLAY_STORE, SearchBarChip.ASSISTANT,
         SearchBarChip.VOICE, SearchBarChip.SETTINGS
     )
 
@@ -49,16 +50,20 @@ object SearchBarButtons {
         SearchBarChip.DATE -> R.string.search_bar_chip_date
         SearchBarChip.PLAY_STORE -> R.string.chip_play_store
         SearchBarChip.SETTINGS -> R.string.settings
+        SearchBarChip.CHROME -> R.string.search_bar_chip_chrome
+        SearchBarChip.WEATHER -> R.string.search_bar_chip_weather
     }
 
     // The date is text, so it has no icon.
     @DrawableRes
-    private fun icon(chip: SearchBarChip): Int? = when (chip) {
+    private fun icon(chip: SearchBarChip, colored: Boolean): Int? = when (chip) {
         SearchBarChip.VOICE -> R.drawable.ic_mic
         SearchBarChip.ASSISTANT -> R.drawable.ic_assistant
         SearchBarChip.DATE -> null
-        SearchBarChip.PLAY_STORE -> R.drawable.ic_play_store
+        SearchBarChip.PLAY_STORE -> if (colored) R.drawable.ic_play_store_color else R.drawable.ic_play_store
         SearchBarChip.SETTINGS -> R.drawable.ic_tab_settings
+        SearchBarChip.CHROME -> if (colored) R.drawable.ic_chrome_color else R.drawable.ic_chrome
+        SearchBarChip.WEATHER -> if (colored) R.drawable.ic_weather_color else R.drawable.ic_weather
     }
 
     // The drawer's stored list ("PLAY_STORE,SETTINGS"); unknown names drop.
@@ -75,9 +80,17 @@ object SearchBarButtons {
 
     // A button for a bar: an icon in [color], or the date as text in it.
     // With no onClick it is a picture only (the settings previews).
-    fun view(context: Context, chip: SearchBarChip, color: Int, onClick: (() -> Unit)?): View {
+    fun view(
+        context: Context,
+        chip: SearchBarChip,
+        color: Int,
+        coloredBrandIcons: Boolean = false,
+        onClick: (() -> Unit)?
+    ): View {
         val pad = context.dp(BUTTON_PAD_DP)
-        val iconRes = icon(chip)
+        val isBrandChip = chip == SearchBarChip.PLAY_STORE || chip == SearchBarChip.CHROME || chip == SearchBarChip.WEATHER
+        val useColor = coloredBrandIcons && isBrandChip
+        val iconRes = icon(chip, useColor)
         val view = if (iconRes == null) {
             TextView(context).apply {
                 textSize = DATE_SP
@@ -92,7 +105,11 @@ object SearchBarButtons {
                 setImageResource(iconRes)
                 scaleType = ImageView.ScaleType.FIT_CENTER
                 setPadding(pad, pad, pad, pad)
-                ImageViewCompat.setImageTintList(this, ColorStateList.valueOf(iconTint(color)))
+                if (useColor) {
+                    ImageViewCompat.setImageTintList(this, null)
+                } else {
+                    ImageViewCompat.setImageTintList(this, ColorStateList.valueOf(iconTint(color)))
+                }
             }
         }
         if (onClick == null) {
@@ -109,6 +126,61 @@ object SearchBarButtons {
         context, System.currentTimeMillis(),
         DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_ABBREV_MONTH or DateUtils.FORMAT_NO_YEAR
     )
+
+    fun openChromeSearch(context: Context) {
+        val intent = Intent(Intent.ACTION_WEB_SEARCH).apply {
+            setPackage("com.android.chrome")
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        if (runCatching { context.startActivity(intent) }.isFailure) {
+            val fallback = Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://www.google.com")).apply {
+                setPackage("com.android.chrome")
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            if (runCatching { context.startActivity(fallback) }.isFailure) {
+                runCatching {
+                    context.startActivity(Intent(Intent.ACTION_WEB_SEARCH).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    })
+                }
+            }
+        }
+    }
+
+    fun openWeatherApp(context: Context) {
+        val samsungWeather = context.packageManager.getLaunchIntentForPackage("com.sec.android.daemonapp")
+        if (samsungWeather != null && runCatching { context.startActivity(samsungWeather) }.isSuccess) return
+
+        val googleWeatherIntent = Intent(Intent.ACTION_VIEW).apply {
+            data = android.net.Uri.parse("dynact://velour/weather/ProxyActivity")
+            setPackage("com.google.android.googlequicksearchbox")
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        if (runCatching { context.startActivity(googleWeatherIntent) }.isSuccess) return
+
+        val googleWeatherSearch = Intent(Intent.ACTION_WEB_SEARCH).apply {
+            putExtra(android.app.SearchManager.QUERY, "weather")
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        runCatching { context.startActivity(googleWeatherSearch) }
+    }
+
+    fun openSamsungFinder(context: Context) {
+        val finderIntent = Intent("com.sec.android.app.launcher.action.OPEN_FINDER").apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        if (runCatching { context.startActivity(finderIntent) }.isFailure) {
+            val launchIntent = context.packageManager.getLaunchIntentForPackage("com.samsung.android.app.galaxyfinder")
+            if (launchIntent != null && runCatching { context.startActivity(launchIntent) }.isSuccess) {
+                return
+            }
+            val compIntent = Intent().apply {
+                setClassName("com.samsung.android.app.galaxyfinder", "com.samsung.android.app.galaxyfinder.GalaxyFinderActivity")
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            runCatching { context.startActivity(compIntent) }
+        }
+    }
 
     // What a tap does. Each is blind-started: a missing handler just no-ops.
     fun run(context: Context, chip: SearchBarChip) {
@@ -134,6 +206,8 @@ object SearchBarButtons {
                     ?.let(context::startActivity)
             }
             SearchBarChip.SETTINGS -> context.startActivity(Intent(context, SettingsActivity::class.java))
+            SearchBarChip.CHROME -> openChromeSearch(context)
+            SearchBarChip.WEATHER -> openWeatherApp(context)
         }
     }
 

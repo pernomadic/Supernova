@@ -68,6 +68,11 @@ class IconRenderer(context: Context) {
     // iconGlass pref (IconGlass): adaptive icons, and the legacy plate, get a
     // glass pane in place of their background.
     var glass: IconGlass = IconGlass.OFF
+    var isDark: Boolean = false
+        set(value) {
+            field = value
+            glassPainter.isDark = value
+        }
     private val glassPainter = GlassPainter()
 
     fun render(

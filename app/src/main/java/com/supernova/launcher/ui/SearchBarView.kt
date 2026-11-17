@@ -84,8 +84,8 @@ class SearchBarView @JvmOverloads constructor(
     // page); true when it took the tap, else the button does its usual.
     var onChip: ((SearchBarChip) -> Boolean)? = null
 
-    private fun addChip(chip: SearchBarChip, color: Int) {
-        val view = SearchBarButtons.view(context, chip, color) {
+    private fun addChip(chip: SearchBarChip, color: Int, coloredBrandIcons: Boolean = false) {
+        val view = SearchBarButtons.view(context, chip, color, coloredBrandIcons) {
             if (interactive && onChip?.invoke(chip) != true) SearchBarButtons.run(context, chip)
         }
         view.tag = CHIP_TAG
@@ -100,10 +100,10 @@ class SearchBarView @JvmOverloads constructor(
 
     // Re-styles the pill from config + resolved SEARCH_BAR surface; guarded so
     // repeated chrome passes with unchanged inputs cost nothing.
-    fun apply(config: DesktopSearchBarConfig, resolved: ResolvedSurface) {
+    fun apply(config: DesktopSearchBarConfig, resolved: ResolvedSurface, coloredBrandIcons: Boolean = false) {
         // The accent too: a coloured logo wears it, and changing the bar's
         // accent in the Style tab left the old colour on the logo.
-        val key = listOf(config, resolved.surface, resolved.text, resolved.accent)
+        val key = listOf(config, resolved.surface, resolved.text, resolved.accent, coloredBrandIcons)
         if (key != applied) {
             applied = key
 
@@ -113,7 +113,8 @@ class SearchBarView @JvmOverloads constructor(
             if (glass != IconGlass.OFF) {
                 // A see-through bar would show its own shadow through it, and
                 // an outline-only one has no surface to be glass.
-                background = GlassPillDrawable(glass, radius).also { it.alpha = alpha }
+                val isDark = androidx.core.graphics.ColorUtils.calculateLuminance(resolved.surface or 0xFF000000.toInt()) < 0.4
+                background = GlassPillDrawable(glass, radius, resolved.surface, isDark = isDark).also { it.alpha = alpha }
                 elevation = 0f
             } else {
                 pill.cornerRadius = radius
@@ -143,7 +144,7 @@ class SearchBarView @JvmOverloads constructor(
             }
             dateChip = null
             config.chips.mapNotNull(SearchBarChip::fromName).distinct().forEach { chip ->
-                addChip(chip, resolved.text)
+                addChip(chip, resolved.text, coloredBrandIcons)
             }
         }
         refreshDate()

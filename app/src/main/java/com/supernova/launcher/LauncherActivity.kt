@@ -23,6 +23,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import android.view.WindowManager
+import android.view.animation.PathInterpolator
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.Toast
@@ -706,7 +707,10 @@ class LauncherActivity :
         // app has to reach this too.
         androidx.core.content.ContextCompat.registerReceiver(
             this, screenOffReceiver,
-            android.content.IntentFilter(Intent.ACTION_SCREEN_OFF),
+            android.content.IntentFilter().apply {
+                addAction(Intent.ACTION_SCREEN_OFF)
+                addAction(Intent.ACTION_USER_PRESENT)
+            },
             androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
         )
     }
@@ -944,11 +948,42 @@ class LauncherActivity :
 
     // Screen off: put the home screen back to its default page with everything
     // closed, so unlocking lands on the home screen rather than on whatever was
-    // open when the screen went dark, as Launcher3 does.
+    // open when the screen went dark, as Launcher3 does. User present plays the
+    // OneUI-style unlock entrance animation if enabled.
     private val screenOffReceiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(context: android.content.Context, intent: Intent) {
-            privateSpaceCard.cancelPending()
-            resetToHome(animate = false, keepDrawer = drawerKeptBehindLaunch)
+            when (intent.action) {
+                Intent.ACTION_SCREEN_OFF -> {
+                    privateSpaceCard.cancelPending()
+                    resetToHome(animate = false, keepDrawer = drawerKeptBehindLaunch)
+                }
+                Intent.ACTION_USER_PRESENT -> {
+                    playUnlockEntranceAnimation()
+                }
+            }
+        }
+    }
+
+    private fun playUnlockEntranceAnimation() {
+        val prefs = viewModel.state.value.prefs
+        if (!prefs.unlockEntranceAnimation || !Animations.enabled(prefs)) return
+        val speed = Animations.factor(prefs)
+        val durationMs = (380L * speed).toLong().coerceAtLeast(1L)
+        val interpolator = PathInterpolator(0.22f, 0.25f, 0f, 1f)
+
+        binding.workspacePager.apply {
+            scaleX = 0.94f
+            scaleY = 0.94f
+            alpha = 0f
+            animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(durationMs).setInterpolator(interpolator).start()
+        }
+        if (binding.dockBar.visibility == View.VISIBLE) {
+            binding.dockBar.apply {
+                scaleX = 0.94f
+                scaleY = 0.94f
+                alpha = 0f
+                animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(durationMs).setInterpolator(interpolator).start()
+            }
         }
     }
 
@@ -1502,7 +1537,16 @@ class LauncherActivity :
         // arrives with its own field focused and the keyboard up, whatever
         // the drawer's keyboard setting. The bar's search chip and the
         // gestures still reach the global overlay.
-        binding.desktopSearchBar.onTap = { openDrawer(forSearch = true) }
+        binding.desktopSearchBar.onTap = {
+            when (viewModel.state.value.prefs.searchBarTapAction) {
+                com.supernova.launcher.ui.SearchBarTapAction.CHROME ->
+                    com.supernova.launcher.ui.SearchBarButtons.openChromeSearch(this)
+                com.supernova.launcher.ui.SearchBarTapAction.FINDER ->
+                    com.supernova.launcher.ui.SearchBarButtons.openSamsungFinder(this)
+                com.supernova.launcher.ui.SearchBarTapAction.DEFAULT ->
+                    openDrawer(forSearch = true)
+            }
+        }
         binding.desktopSearchBar.onLongPress = { anchor -> showSearchBarMenu(anchor) }
     }
 
@@ -2335,7 +2379,8 @@ class LauncherActivity :
             binding.desktopSearchBar.apply(
                 barConfig,
                 com.supernova.launcher.ui.theme.Styles.resolve(this, prefs)
-                    .of(com.supernova.launcher.ui.theme.SurfaceId.SEARCH_BAR)
+                    .of(com.supernova.launcher.ui.theme.SurfaceId.SEARCH_BAR),
+                prefs.searchBarColoredIcons
             )
         }
         // A phone on its side shares one row between the bar (left) and the
@@ -2505,6 +2550,7 @@ class LauncherActivity :
     }
 
     private fun openDrawer(forSearch: Boolean = false) {
+        if (viewModel.state.value.prefs.homeScreenLayout == com.supernova.launcher.data.HomeScreenLayout.HOME_ONLY) return
         animateWallpaperZoom(1f)
         drawer.open(forSearch)
     }
@@ -2770,6 +2816,7 @@ class LauncherActivity :
     // The swipe indicator belongs to a swipe up that opens the drawer, and
     // points at the dock: it is only wanted with both.
     private fun swipeArrowWanted(prefs: LauncherPrefs): Boolean =
+        prefs.homeScreenLayout != com.supernova.launcher.data.HomeScreenLayout.HOME_ONLY &&
         prefs.drawerSwipeIndicator && prefs.dockEnabled &&
             GestureDefaults.swipeUpOpensDrawer(prefs.gestureBindings)
 

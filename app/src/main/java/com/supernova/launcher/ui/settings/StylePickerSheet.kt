@@ -62,7 +62,13 @@ object StylePickerSheet {
         return com.supernova.launcher.data.IconGlass.fromName(glass) != com.supernova.launcher.data.IconGlass.OFF
     }
 
-    fun show(context: Context, viewModel: LauncherViewModel, surfaceId: SurfaceId, onDismiss: () -> Unit = {}) {
+    fun show(
+        context: Context,
+        viewModel: LauncherViewModel,
+        surfaceId: SurfaceId,
+        variant: com.supernova.launcher.ui.theme.ThemeStyleVariant? = null,
+        onDismiss: () -> Unit = {}
+    ) {
         val binding = SheetStylePickerBinding.inflate(LayoutInflater.from(context))
         val dialog = com.supernova.launcher.ui.Sheets.open(context)
         dialog.setContentView(binding.root)
@@ -75,16 +81,27 @@ object StylePickerSheet {
         val density = context.resources.displayMetrics.density
 
         var config = StyleConfig.decode(prefs.styleConfig)
-        var style = config.styleFor(surfaceId)
+        var style = config.styleFor(surfaceId, variant)
         var slot = Slot.SURFACE
 
-        binding.styleTitle.setText(EnumLabels.of(surfaceId))
+        val variantLabel = when (variant) {
+            com.supernova.launcher.ui.theme.ThemeStyleVariant.DARK_DEFAULT -> context.getString(R.string.style_group_surfaces_dark_default)
+            com.supernova.launcher.ui.theme.ThemeStyleVariant.DARK_AMOLED -> context.getString(R.string.style_group_surfaces_dark_amoled)
+            com.supernova.launcher.ui.theme.ThemeStyleVariant.LIGHT_DEFAULT -> context.getString(R.string.style_group_surfaces_light_default)
+            com.supernova.launcher.ui.theme.ThemeStyleVariant.LIGHT_FROSTED -> context.getString(R.string.style_group_surfaces_light_frosted)
+            null -> null
+        }
+        if (variantLabel != null) {
+            binding.styleTitle.text = "${context.getString(EnumLabels.of(surfaceId))} ($variantLabel)"
+        } else {
+            binding.styleTitle.setText(EnumLabels.of(surfaceId))
+        }
 
         val stripDot = GradientDrawable().apply { shape = GradientDrawable.OVAL }
         binding.stripAccent.background = stripDot
 
         fun persist() {
-            config = config.with(surfaceId, style)
+            config = config.with(surfaceId, style, variant)
             viewModel.set(Pref.styleConfig, config.encode())
         }
 
@@ -123,8 +140,19 @@ object StylePickerSheet {
             } else {
                 prefs
             }
+            val previewPrefs = when (variant) {
+                com.supernova.launcher.ui.theme.ThemeStyleVariant.DARK_DEFAULT ->
+                    base.copy(themeMode = com.supernova.launcher.ui.theme.ThemeMode.DARK, darkStyle = com.supernova.launcher.ui.theme.DarkStyle.DEFAULT)
+                com.supernova.launcher.ui.theme.ThemeStyleVariant.DARK_AMOLED ->
+                    base.copy(themeMode = com.supernova.launcher.ui.theme.ThemeMode.DARK, darkStyle = com.supernova.launcher.ui.theme.DarkStyle.AMOLED)
+                com.supernova.launcher.ui.theme.ThemeStyleVariant.LIGHT_DEFAULT ->
+                    base.copy(themeMode = com.supernova.launcher.ui.theme.ThemeMode.LIGHT, lightStyle = com.supernova.launcher.ui.theme.LightStyle.DEFAULT)
+                com.supernova.launcher.ui.theme.ThemeStyleVariant.LIGHT_FROSTED ->
+                    base.copy(themeMode = com.supernova.launcher.ui.theme.ThemeMode.LIGHT, lightStyle = com.supernova.launcher.ui.theme.LightStyle.FROSTED)
+                null -> base
+            }
             return Styles.resolve(
-                context, base.copy(styleConfig = config.with(surfaceId, style).encode())
+                context, previewPrefs.copy(styleConfig = config.with(surfaceId, style, variant).encode())
             ).of(surfaceId)
         }
 
