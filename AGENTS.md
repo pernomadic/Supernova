@@ -81,3 +81,14 @@ to the official app. `local/` is git-ignored: put `keystore.properties`
 
 `app/src/androidTest` is instrumentation testing — it needs a device or emulator
 and is not part of the normal loop.
+
+### Known Windows quirk
+
+DataStore's Android artifact falls back to `File.renameTo()` when
+`Build.VERSION.SDK_INT < 26`, and `SDK_INT` is `0` in local JVM tests. `renameTo`
+cannot replace an existing file on Windows, so **any test that writes the same
+DataStore file twice fails on a Windows host**. On devices and on Linux/macOS the
+rename replaces atomically. `UsageMigrationTest` skips that one case on Windows
+with an explanatory comment. Do not "fix" this by regenerating baselines or by
+changing app code — run the suite on Linux if full coverage of those tests matters.
+

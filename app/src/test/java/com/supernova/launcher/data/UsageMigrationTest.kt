@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assume.assumeFalse
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Rule
@@ -39,6 +40,12 @@ class UsageMigrationTest {
 
     @Test
     fun `usage keys move out of the main store`() = runBlocking {
+        // Not a Windows test: DataStore's Android artifact moves its temp file with
+        // File.renameTo until Build.VERSION.SDK_INT >= 26, and that field is 0 in a
+        // local JVM test. renameTo cannot replace an existing file on Windows, so
+        // the second write to the main store here (the migration's clean-up move)
+        // always fails. On Android and on Linux/macOS hosts it replaces atomically.
+        assumeFalse(System.getProperty("os.name").startsWith("Windows", ignoreCase = true))
         val main = store("main")
         main.edit {
             it[UsageKeys.launchCounts] = setOf("0/com.a/com.a.Main=3")
