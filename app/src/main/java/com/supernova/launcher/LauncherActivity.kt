@@ -1562,8 +1562,13 @@ class LauncherActivity :
                 com.supernova.launcher.ui.SearchBarButtons.openChromeSearch(this)
             com.supernova.launcher.ui.SearchBarTapAction.FINDER ->
                 com.supernova.launcher.ui.openSamsungFinder(this)
-            com.supernova.launcher.ui.SearchBarTapAction.DEFAULT ->
-                openDrawer(forSearch = true)
+            com.supernova.launcher.ui.SearchBarTapAction.DEFAULT -> {
+                if (viewModel.state.value.prefs.homeScreenLayout == com.supernova.launcher.data.HomeScreenLayout.HOME_ONLY) {
+                    search.open()
+                } else {
+                    openDrawer(forSearch = true)
+                }
+            }
         }
     }
 
@@ -2291,7 +2296,8 @@ class LauncherActivity :
                 LabelStyler.apply(
                     probe, prefs, onWallpaper = true, context = com.supernova.launcher.ui.LabelContext.DESKTOP
                 )
-                probe.lineHeight
+                val lines = if (prefs.labelSingleLine) 1 else 2
+                probe.lineHeight * lines
             } else {
                 0
             }

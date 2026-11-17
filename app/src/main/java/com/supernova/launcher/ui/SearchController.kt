@@ -608,29 +608,19 @@ class SearchController(
         onClearRecents = ::clearRecentQueries
     )
 
-    // The empty search window: recent searches, suggested shortcuts, the
-    // recently opened apps, then - under a hairline - the drawer's folders
-    // and every app that isn't in one.
+    // The empty search window: recent searches and suggested shortcuts.
+    // Apps and folders do not appear below the search bar in zero-state for a clean UI.
     private fun showZeroState() {
-        val frequent = viewModel.recentApps(gridColumns())
         val shortcuts = SuggestedShortcuts.pills(viewModel)
-        // Folder members live inside their folder, as in the drawer.
-        // A folder inside another (#229) lives inside it too.
-        val groups = viewModel.drawerFolderGroups().filter { viewModel.drawerFolderHasContent(it) }
-        val inFolders = groups.filter { viewModel.leavesMainList(it) }.flatMapTo(HashSet()) { it.members }
-        val shown = groups.filterNot { com.supernova.launcher.data.TabFolders.keyOf(it.id) in inFolders }
-        val folders = shown.map { group ->
-            SearchResult.Folder(
-                itemId = null, groupId = group.id, label = group.name,
-                icon = folderIcon(com.supernova.launcher.search.FolderSearchProvider.Hit(null, group.id, group.name))
-            )
-        }
-        val allApps = com.supernova.launcher.data.LabelOrder.sorted(
-            viewModel.visibleApps().filterNot { viewModel.hiddenKey(it) in inFolders }
-        ) { it.label }
         val surface = overlaySurface ?: return
         styleSurface(surface)
-        surface.adapter.submitZeroState(shortcuts, frequent, allApps, folders, recentQueries)
+        surface.adapter.submitZeroState(
+            shortcuts = shortcuts,
+            frequentApps = emptyList(),
+            allApps = emptyList(),
+            folders = emptyList(),
+            recents = recentQueries
+        )
     }
 
     private fun openContact(contact: SearchResult.Contact) {

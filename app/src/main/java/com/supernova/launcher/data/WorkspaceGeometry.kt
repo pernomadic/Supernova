@@ -67,26 +67,82 @@ object WorkspaceGeometry {
 
     fun fitted(model: LauncherModel, cols: Int, rows: Int): LauncherModel {
         fitCache?.let { if (it.model === model && it.cols == cols && it.rows == rows) return it.result }
-        val misfits = model.items.filter { it.container == ContainerType.WORKSPACE && !fits(it, cols, rows) }
+        val workspaceItems = model.items.filter { it.container == ContainerType.WORKSPACE }
+        val takenByPage = HashMap<Int, ArrayList<CellRect>>()
+        val misfits = collectMisfits(workspaceItems, cols, rows, takenByPage)
+
         val result = if (misfits.isEmpty()) {
             model
         } else {
-            val misfitIds = misfits.mapTo(HashSet()) { it.id }
-            val placed = HashMap<String, LauncherItem>()
-            misfits.groupBy { it.page }.forEach { (page, items) ->
-                val taken = model.items
-                    .filter { it.container == ContainerType.WORKSPACE && it.page == page && it.id !in misfitIds }
-                    .mapTo(ArrayList()) { itemRect(it, cols, rows) }
-                items.sortedWith(compareBy({ it.cellY }, { it.cellX })).forEach { item ->
-                    val fit = refit(item, taken, cols, rows)
-                    placed[item.id] = fit
-                    taken += itemRect(fit, cols, rows)
-                }
-            }
-            model.copy(items = model.items.map { placed[it.id] ?: it })
+            val maxPage = maxOf(model.pageCount - 1, workspaceItems.maxOfOrNull { it.page } ?: 0)
+            val (placed, newMaxPage) = relocateMisfits(misfits, takenByPage, cols, rows, maxPage)
+            val newPageCount = maxOf(model.pageCount, newMaxPage + 1)
+            model.copy(items = model.items.map { placed[it.id] ?: it }, pageCount = newPageCount)
         }
         fitCache = FitCache(model, cols, rows, result)
         return result
+    }
+
+    private fun collectMisfits(
+        items: List<LauncherItem>,
+        cols: Int,
+        rows: Int,
+        takenByPage: HashMap<Int, ArrayList<CellRect>>
+    ): List<LauncherItem> {
+        val misfits = ArrayList<LauncherItem>()
+        for ((page, pageItems) in items.groupBy { it.page }) {
+            val taken = takenByPage.getOrPut(page) { ArrayList() }
+            for (item in pageItems) {
+                if (!fits(item, cols, rows)) {
+                    misfits += item
+                } else {
+                    taken += itemRect(item, cols, rows)
+                }
+            }
+        }
+        return misfits
+    }
+
+    private fun relocateMisfits(
+        misfits: List<LauncherItem>,
+        takenByPage: HashMap<Int, ArrayList<CellRect>>,
+        cols: Int,
+        rows: Int,
+        initialMaxPage: Int
+    ): Pair<Map<String, LauncherItem>, Int> {
+        val placed = HashMap<String, LauncherItem>()
+        var maxPage = initialMaxPage
+        val sortedMisfits = misfits.sortedWith(compareBy({ it.page }, { it.cellY }, { it.cellX }))
+        for (item in sortedMisfits) {
+            val fitItem = placeMisfit(item, takenByPage, cols, rows)
+            placed[item.id] = fitItem
+            if (fitItem.page > maxPage) maxPage = fitItem.page
+        }
+        return placed to maxPage
+    }
+
+    private fun placeMisfit(
+        item: LauncherItem,
+        takenByPage: HashMap<Int, ArrayList<CellRect>>,
+        cols: Int,
+        rows: Int
+    ): LauncherItem {
+        var page = item.page
+        while (page < LauncherRepository.MAX_PAGES) {
+            val taken = takenByPage.getOrPut(page) { ArrayList() }
+            val fitCell = findFit(item, page, taken, cols, rows)
+            if (fitCell != null) {
+                val widget = item.itemType == ItemType.WIDGET
+                val spanX = if (widget) item.spanX.coerceIn(1, cols) else item.spanX
+                val spanY = if (widget) item.spanY.coerceIn(1, rows) else item.spanY
+                val area = cellRect(fitCell.first, fitCell.second, spanX, spanY)
+                val fitItem = placedOn(item.copy(page = page), area, cols, rows)
+                taken += itemRect(fitItem, cols, rows)
+                return fitItem
+            }
+            page++
+        }
+        return item
     }
 
     private fun inBounds(r: CellRect, cols: Int, rows: Int): Boolean =
@@ -111,18 +167,29 @@ object WorkspaceGeometry {
     private fun onOwnGrid(center: Float, cell: Int, span: Int): Boolean =
         aligned(center - (span - 1) / 2f) && kotlin.math.abs(center - span / 2f - cell) <= 0.5f + EPSILON
 
-    private fun refit(item: LauncherItem, taken: List<CellRect>, cols: Int, rows: Int): LauncherItem {
+    private fun findFit(
+        item: LauncherItem,
+        page: Int,
+        taken: List<CellRect>,
+        cols: Int,
+        rows: Int
+    ): Pair<Int, Int>? =
+        if (page == item.page) {
+            findFitOnSamePage(item, taken, cols, rows)
+        } else {
+            firstFreeCell(item, taken, cols, rows)
+        }
+
+    private fun findFitOnSamePage(
+        item: LauncherItem,
+        taken: List<CellRect>,
+        cols: Int,
+        rows: Int
+    ): Pair<Int, Int>? {
         val rect = itemRect(item, cols, rows)
         val widget = item.itemType == ItemType.WIDGET
-        // An icon keeps its span: a large icon stays large on a new grid.
         val spanX = if (widget) ceil(rect.right - rect.left - EPSILON).toInt().coerceIn(1, cols) else item.spanX
         val spanY = if (widget) ceil(rect.bottom - rect.top - EPSILON).toInt().coerceIn(1, rows) else item.spanY
-        fun free(cell: Pair<Int, Int>): Boolean {
-            val area = cellRect(cell.first, cell.second, spanX, spanY)
-            return inBounds(area, cols, rows) && taken.none { overlaps(it, area) }
-        }
-        // Its old cell: a widget pulled inside where it hangs over the edge,
-        // an icon only while that cell is still on the grid.
         val stayed = when {
             widget ->
                 floor(rect.left + EPSILON).toInt().coerceIn(0, cols - spanX) to
@@ -130,9 +197,28 @@ object WorkspaceGeometry {
             item.cellX in 0..(cols - spanX) && item.cellY in 0..(rows - spanY) -> item.cellX to item.cellY
             else -> null
         }
+        fun free(cell: Pair<Int, Int>): Boolean {
+            val area = cellRect(cell.first, cell.second, spanX, spanY)
+            return inBounds(area, cols, rows) && taken.none { overlaps(it, area) }
+        }
         val near = (rect.left + rect.right) / 2f to (rect.top + rect.bottom) / 2f
-        val cell = stayed?.takeIf(::free) ?: nearest(near, spanX to spanY, cols, rows, ::free) ?: return item
-        return placedOn(item, cellRect(cell.first, cell.second, spanX, spanY), cols, rows)
+        return stayed?.takeIf(::free) ?: nearest(near, spanX to spanY, cols, rows, ::free)
+    }
+
+    private fun firstFreeCell(
+        item: LauncherItem,
+        taken: List<CellRect>,
+        cols: Int,
+        rows: Int
+    ): Pair<Int, Int>? {
+        val widget = item.itemType == ItemType.WIDGET
+        val spanX = if (widget) item.spanX.coerceIn(1, cols) else item.spanX
+        val spanY = if (widget) item.spanY.coerceIn(1, rows) else item.spanY
+        val cells = (0..(rows - spanY)).flatMap { y -> (0..(cols - spanX)).map { x -> x to y } }
+        return cells.firstOrNull { cell ->
+            val area = cellRect(cell.first, cell.second, spanX, spanY)
+            inBounds(area, cols, rows) && taken.none { overlaps(it, area) }
+        }
     }
 
     private fun placedOn(item: LauncherItem, area: CellRect, cols: Int, rows: Int): LauncherItem {

@@ -189,22 +189,52 @@ fun openWeatherApp(context: Context) {
 }
 
 fun openSamsungFinder(context: Context) {
-    val finderIntent = Intent("com.sec.android.app.launcher.action.OPEN_FINDER").apply {
-        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-    }
-    if (runCatching { context.startActivity(finderIntent) }.isFailure) {
-        val launchIntent = context.packageManager.getLaunchIntentForPackage("com.samsung.android.app.galaxyfinder")
-        if (launchIntent != null && runCatching { context.startActivity(launchIntent) }.isSuccess) {
-            return
-        }
-        val compIntent = Intent().apply {
+    val intents = listOfNotNull(
+        Intent().apply {
+            setClassName("com.sec.android.app.launcher", "com.sec.android.app.launcher.search.SearchActivity")
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        },
+        Intent("com.sec.android.app.launcher.action.OPEN_FINDER").apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        },
+        Intent("com.samsung.android.app.galaxyfinder.LAUNCH_SFINDER").apply {
+            setPackage("com.samsung.android.app.galaxyfinder")
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        },
+        Intent("com.samsung.android.app.galaxyfinder.LAUNCH_SFINDER").apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        },
+        Intent().apply {
             setClassName(
                 "com.samsung.android.app.galaxyfinder",
                 "com.samsung.android.app.galaxyfinder.GalaxyFinderActivity"
             )
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        },
+        Intent().apply {
+            setClassName(
+                "com.samsung.android.app.galaxyfinder",
+                "com.samsung.android.app.galaxyfinder.MainActivity"
+            )
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        },
+        context.packageManager.getLaunchIntentForPackage("com.samsung.android.app.galaxyfinder")?.apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        },
+        Intent(Intent.ACTION_SEARCH).apply {
+            setPackage("com.sec.android.app.launcher")
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        },
+        Intent(Intent.ACTION_SEARCH).apply {
+            setPackage("com.samsung.android.app.galaxyfinder")
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
-        runCatching { context.startActivity(compIntent) }
+    )
+
+    for (intent in intents) {
+        if (runCatching { context.startActivity(intent) }.isSuccess) {
+            return
+        }
     }
 }
 

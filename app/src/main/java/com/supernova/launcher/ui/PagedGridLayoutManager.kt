@@ -82,7 +82,9 @@ class PagedGridLayoutManager(private val columns: Int, private val rows: Int) : 
         val cellTop = paddingTop + (inPage / columns) * cellHeight
         measureChildWithMargins(view, 0, 0)
         val w = getDecoratedMeasuredWidth(view)
+        val h = getDecoratedMeasuredHeight(view)
         val left = cellLeft + (cellWidth - w) / 2
-        layoutDecoratedWithMargins(view, left, cellTop, left + w, cellTop + getDecoratedMeasuredHeight(view))
+        val top = cellTop + ((cellHeight - h) / 2).coerceAtLeast(0)
+        layoutDecoratedWithMargins(view, left, top, left + w, top + h)
     }
 }
