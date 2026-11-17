@@ -950,15 +950,20 @@ class LauncherActivity :
     // closed, so unlocking lands on the home screen rather than on whatever was
     // open when the screen went dark, as Launcher3 does. User present plays the
     // OneUI-style unlock entrance animation if enabled.
+    private var wasScreenOff = false
     private val screenOffReceiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(context: android.content.Context, intent: Intent) {
             when (intent.action) {
                 Intent.ACTION_SCREEN_OFF -> {
+                    wasScreenOff = true
                     privateSpaceCard.cancelPending()
                     resetToHome(animate = false, keepDrawer = drawerKeptBehindLaunch)
                 }
                 Intent.ACTION_USER_PRESENT -> {
-                    playUnlockEntranceAnimation()
+                    if (wasScreenOff) {
+                        wasScreenOff = false
+                        playUnlockEntranceAnimation()
+                    }
                 }
             }
         }
@@ -979,6 +984,14 @@ class LauncherActivity :
         }
         if (binding.dockBar.visibility == View.VISIBLE) {
             binding.dockBar.apply {
+                scaleX = 0.94f
+                scaleY = 0.94f
+                alpha = 0f
+                animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(durationMs).setInterpolator(interpolator).start()
+            }
+        }
+        if (binding.desktopSearchBar.visibility == View.VISIBLE) {
+            binding.desktopSearchBar.apply {
                 scaleX = 0.94f
                 scaleY = 0.94f
                 alpha = 0f
@@ -1010,6 +1023,10 @@ class LauncherActivity :
         if (!viewModel.state.value.prefs.dockRememberPosition) showMainDockPage(animate = false)
         widgets.stopListening()
         runCatching { unregisterReceiver(dateChangeReceiver) }
+        val powerManager = getSystemService(android.os.PowerManager::class.java)
+        if (powerManager?.isInteractive == false) {
+            wasScreenOff = true
+        }
         super.onStop()
     }
 
@@ -1021,6 +1038,10 @@ class LauncherActivity :
         // open is one they came back to, not one parked behind an app.
         drawerKeptBehindLaunch = false
         reopenDockIfAutoClosed()
+        if (wasScreenOff) {
+            wasScreenOff = false
+            binding.root.post { playUnlockEntranceAnimation() }
+        }
     }
 
     override fun onPause() {
@@ -1227,6 +1248,7 @@ class LauncherActivity :
 
     private fun drawerPullAllowed(): Boolean {
         if (!::drawer.isInitialized || drawer.isVisible) return false
+        if (viewModel.state.value.prefs.homeScreenLayout == com.supernova.launcher.data.HomeScreenLayout.HOME_ONLY) return false
         if (::feed.isInitialized && feed.isOpen) return false
         if (::search.isInitialized && search.isOpen) return false
         if (::editMode.isInitialized && editMode.isOpen) return false

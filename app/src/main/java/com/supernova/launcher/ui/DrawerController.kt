@@ -758,6 +758,7 @@ class DrawerController(
     // forSearch: opened to type in (the home bar), keyboard setting or not.
     fun open(forSearch: Boolean = false) {
         val prefs = viewModel.state.value.prefs
+        if (prefs.homeScreenLayout == com.supernova.launcher.data.HomeScreenLayout.HOME_ONLY) return
         prepareContent(prefs)
         if (isPulling) return
         if (!isVisible) {
@@ -872,12 +873,13 @@ class DrawerController(
         private set
 
     fun beginPull() {
+        val prefs = viewModel.state.value.prefs
+        if (prefs.homeScreenLayout == com.supernova.launcher.data.HomeScreenLayout.HOME_ONLY) return
         if (isPulling) return
         if (transition != DrawerTransition.SLIDE_UP) {
             open()
             return
         }
-        val prefs = viewModel.state.value.prefs
         isPulling = true
         prepareContent(prefs)
         val sheet = binding.drawerSheet
@@ -1879,7 +1881,10 @@ class DrawerController(
             sheet.visibility = View.GONE
             behavior.isHideable = true
             behavior.state = BottomSheetBehavior.STATE_HIDDEN
+            behavior.isDraggable = false
             return
+        } else {
+            behavior.isDraggable = true
         }
 
         applyTransition(prefs)

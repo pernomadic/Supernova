@@ -534,7 +534,10 @@ class SettingsPreviewView @JvmOverloads constructor(
                 icons, dp(64),
                 style = prefs.folderPreviewStyle,
                 plateColor = FolderIconDrawable.plateColor(
-                    prefs.folderMatchWindowColor, prefs.folderPlateColor, resolved.surface
+                    prefs.folderMatchWindowColor, prefs.folderPlateColor, resolved.surface,
+                    com.supernova.launcher.ui.theme.OneUiTheme.defaultFolderPlateColor(
+                        com.supernova.launcher.ui.theme.OneUiTheme.activeVariant(context, prefs)
+                    )
                 ),
                 shape = FolderIconDrawable.plateShape(prefs.folderIconShape, prefs),
                 customSpec = com.supernova.launcher.data.CustomShapeSpec.decode(prefs.iconShapeCustom),

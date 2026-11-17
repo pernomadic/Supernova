@@ -77,27 +77,38 @@ object OneUiTheme {
             SurfaceId.SEARCH_BAR, SurfaceId.DRAWER_SEARCH_BAR -> AMOLED_BAR
             SurfaceId.DOCK -> AMOLED_BLACK
         }
+        ThemeStyleVariant.DARK_DEFAULT -> when (surfaceId) {
+            SurfaceId.FOLDER -> 0xFF1E2735.toInt()
+            SurfaceId.DRAWER -> 0xFF1E2735.toInt()
+            SurfaceId.CARDS, SurfaceId.POPUP -> 0xFF1A2230.toInt()
+            SurfaceId.SEARCH_BAR -> 0xFF1A2230.toInt()
+            SurfaceId.DRAWER_SEARCH_BAR -> 0x24FFFFFF
+            SurfaceId.SETTINGS -> 0xFF0D1117.toInt()
+            else -> fallbackColor
+        }
         ThemeStyleVariant.LIGHT_FROSTED -> when (surfaceId) {
             SurfaceId.FOLDER -> FROSTED_SURFACE
             SurfaceId.CARDS, SurfaceId.POPUP -> FROSTED_CARD
             SurfaceId.SEARCH_BAR, SurfaceId.DRAWER_SEARCH_BAR -> FROSTED_BAR
             SurfaceId.DRAWER -> FROSTED_SURFACE
-            SurfaceId.DOCK -> (0xCC shl 24) or (fallbackColor and 0x00FFFFFF)
+            SurfaceId.SETTINGS -> 0xFFF5F7FA.toInt()
+            SurfaceId.DOCK -> 0xCCFFFFFF.toInt()
             else -> fallbackColor
         }
-        ThemeStyleVariant.DARK_DEFAULT -> when (surfaceId) {
-            // Fix dark theme search bar defaulting to light when system context was light
-            SurfaceId.SEARCH_BAR -> 0xFF1A2230.toInt()
-            SurfaceId.DRAWER_SEARCH_BAR -> 0x24FFFFFF
+        ThemeStyleVariant.LIGHT_DEFAULT -> when (surfaceId) {
+            SurfaceId.FOLDER -> 0xFFFFFFFF.toInt()
+            SurfaceId.DRAWER -> 0xFFFFFFFF.toInt()
+            SurfaceId.CARDS, SurfaceId.POPUP -> 0xFFFFFFFF.toInt()
+            SurfaceId.SEARCH_BAR, SurfaceId.DRAWER_SEARCH_BAR -> 0xFFFFFFFF.toInt()
+            SurfaceId.SETTINGS -> 0xFFF4F5F7.toInt()
             else -> fallbackColor
         }
-        ThemeStyleVariant.LIGHT_DEFAULT -> fallbackColor
     }
 
     fun defaultFolderPlateColor(variant: ThemeStyleVariant): Int = when (variant) {
-        ThemeStyleVariant.DARK_AMOLED -> AMOLED_FOLDER_PLATE
-        ThemeStyleVariant.DARK_DEFAULT -> 0x59000000
-        ThemeStyleVariant.LIGHT_FROSTED -> FROSTED_FOLDER_PLATE
-        ThemeStyleVariant.LIGHT_DEFAULT -> 0x59FFFFFF
+        ThemeStyleVariant.DARK_AMOLED -> 0x99000000.toInt()
+        ThemeStyleVariant.DARK_DEFAULT -> 0x66000000.toInt()
+        ThemeStyleVariant.LIGHT_FROSTED -> 0x99FFFFFF.toInt()
+        ThemeStyleVariant.LIGHT_DEFAULT -> 0x80FFFFFF.toInt()
     }
 }

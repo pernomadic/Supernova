@@ -267,12 +267,12 @@ object SettingsCatalogue {
                         R.string.accent_color, accents.map { context.getString(EnumLabels.of(it)) },
                         accents.indexOf(viewModel.state.value.prefs.accentColor),
                         { viewModel.set(Pref.accentColor, accents[it]) },
-                        swatches = accents.map { context.getColor(it.colorRes) }
+                        swatches = accents.map { com.supernova.launcher.ui.theme.ThemeEngine.accentColor(context, it) }
                     )
                 )
             },
             look = SettingItem.RowLook(
-                R.drawable.ic_style_accent, swatch = { context.getColor(it.accentColor.colorRes) }
+                R.drawable.ic_style_accent, swatch = { com.supernova.launcher.ui.theme.ThemeEngine.accentColor(context, it.accentColor) }
             )
         )
     }
@@ -1111,8 +1111,28 @@ object SettingsCatalogue {
                     get = { it.searchPrivateKeyboard },
                     set = { viewModel.set(Pref.searchPrivateKeyboard, it) },
                     subtitle = R.string.search_private_keyboard_summary
-                )
-            )
+                ),
+                SettingItem.Header(R.string.desktop_search_bar),
+                rows.choice(
+                    R.string.search_bar_click_action,
+                    com.supernova.launcher.ui.SearchBarTapAction.entries,
+                    { it.searchBarTapAction },
+                    { action ->
+                        when (action) {
+                            com.supernova.launcher.ui.SearchBarTapAction.DEFAULT -> R.string.search_bar_action_default
+                            com.supernova.launcher.ui.SearchBarTapAction.CHROME -> R.string.search_bar_action_chrome
+                            com.supernova.launcher.ui.SearchBarTapAction.FINDER -> R.string.search_bar_action_finder
+                        }
+                    }
+                ) { action -> viewModel.set(Pref.searchBarTapAction, action) },
+                SettingItem.Toggle(
+                    R.string.search_bar_colored_icons,
+                    get = { it.searchBarColoredIcons },
+                    set = { on -> viewModel.set(Pref.searchBarColoredIcons, on) },
+                    subtitle = R.string.search_bar_colored_icons_summary
+                ),
+                SettingItem.Header(R.string.search_bar_chips)
+            ) + SearchBarButtons.ROWS.map(rows::barChip)
         ),
         // The Drawer groups page, opened from the App drawer page's row;
         // back returns there. It has no rows of its own: SettingsActivity
@@ -1877,7 +1897,27 @@ object SettingsCatalogue {
                 )
             }
         )
-    )
+    ) + listOf(
+        com.supernova.launcher.ui.theme.ThemeStyleVariant.DARK_DEFAULT to R.string.style_group_surfaces_dark_default,
+        com.supernova.launcher.ui.theme.ThemeStyleVariant.DARK_AMOLED to R.string.style_group_surfaces_dark_amoled,
+        com.supernova.launcher.ui.theme.ThemeStyleVariant.LIGHT_DEFAULT to R.string.style_group_surfaces_light_default,
+        com.supernova.launcher.ui.theme.ThemeStyleVariant.LIGHT_FROSTED to R.string.style_group_surfaces_light_frosted
+    ).map { (variant, titleRes) ->
+        SettingsSection(
+            titleRes,
+            listOf(
+                SettingItem.StyleTarget(R.string.settings_section_home, SurfaceId.HOME, { actions.openStylePicker(SurfaceId.HOME, variant) }, variant),
+                SettingItem.StyleTarget(R.string.settings_section_drawer, SurfaceId.DRAWER, { actions.openStylePicker(SurfaceId.DRAWER, variant) }, variant),
+                SettingItem.StyleTarget(R.string.settings_section_dock, SurfaceId.DOCK, { actions.openStylePicker(SurfaceId.DOCK, variant) }, variant),
+                SettingItem.StyleTarget(R.string.settings_section_folders, SurfaceId.FOLDER, { actions.openStylePicker(SurfaceId.FOLDER, variant) }, variant),
+                SettingItem.StyleTarget(R.string.style_popup, SurfaceId.POPUP, { actions.openStylePicker(SurfaceId.POPUP, variant) }, variant),
+                SettingItem.StyleTarget(R.string.style_cards, SurfaceId.CARDS, { actions.openStylePicker(SurfaceId.CARDS, variant) }, variant),
+                SettingItem.StyleTarget(R.string.desktop_search_bar, SurfaceId.SEARCH_BAR, { actions.openStylePicker(SurfaceId.SEARCH_BAR, variant) }, variant),
+                SettingItem.StyleTarget(R.string.drawer_search_bar, SurfaceId.DRAWER_SEARCH_BAR, { actions.openStylePicker(SurfaceId.DRAWER_SEARCH_BAR, variant) }, variant),
+                SettingItem.StyleTarget(R.string.settings, SurfaceId.SETTINGS, { actions.openStylePicker(SurfaceId.SETTINGS, variant) }, variant)
+            )
+        )
+    }
     }
 
     // The Style bottom tab. Theme and accent moved here from Look & feel; the
@@ -1909,11 +1949,11 @@ object SettingsCatalogue {
             rows.choice(
                 R.string.dark_style, com.supernova.launcher.ui.theme.DarkStyle.entries,
                 { it.darkStyle }, { EnumLabels.of(it) }
-            ) { viewModel.set(Pref.darkStyle, it) },
+            ) { viewModel.set(Pref.darkStyle, it) }.withLook(SettingItem.RowLook(R.drawable.ic_style_dark)),
             rows.choice(
                 R.string.light_style, com.supernova.launcher.ui.theme.LightStyle.entries,
                 { it.lightStyle }, { EnumLabels.of(it) }
-            ) { viewModel.set(Pref.lightStyle, it) },
+            ) { viewModel.set(Pref.lightStyle, it) }.withLook(SettingItem.RowLook(R.drawable.ic_style_light)),
             SettingItem.Row(
                 R.string.theme_schedule_times,
                 subtitle = {
@@ -1925,26 +1965,33 @@ object SettingsCatalogue {
                 onClick = actions.editThemeSchedule,
                 look = SettingItem.RowLook(R.drawable.ic_style_schedule)
             ).hiddenWhen { dependsOn(R.string.theme_mode, it.themeMode != ThemeMode.SCHEDULE) },
-            accentRow(context, viewModel, actions)
-        ) + listOf(
-            com.supernova.launcher.ui.theme.ThemeStyleVariant.DARK_DEFAULT to R.string.style_group_surfaces_dark_default,
-            com.supernova.launcher.ui.theme.ThemeStyleVariant.DARK_AMOLED to R.string.style_group_surfaces_dark_amoled,
-            com.supernova.launcher.ui.theme.ThemeStyleVariant.LIGHT_DEFAULT to R.string.style_group_surfaces_light_default,
-            com.supernova.launcher.ui.theme.ThemeStyleVariant.LIGHT_FROSTED to R.string.style_group_surfaces_light_frosted
-        ).flatMap { (variant, headerRes) ->
-            listOf(
-                SettingItem.Header(headerRes),
-                SettingItem.StyleTarget(R.string.settings_section_home, SurfaceId.HOME, { actions.openStylePicker(SurfaceId.HOME, variant) }, variant),
-                SettingItem.StyleTarget(R.string.settings_section_drawer, SurfaceId.DRAWER, { actions.openStylePicker(SurfaceId.DRAWER, variant) }, variant),
-                SettingItem.StyleTarget(R.string.settings_section_dock, SurfaceId.DOCK, { actions.openStylePicker(SurfaceId.DOCK, variant) }, variant),
-                SettingItem.StyleTarget(R.string.settings_section_folders, SurfaceId.FOLDER, { actions.openStylePicker(SurfaceId.FOLDER, variant) }, variant),
-                SettingItem.StyleTarget(R.string.style_popup, SurfaceId.POPUP, { actions.openStylePicker(SurfaceId.POPUP, variant) }, variant),
-                SettingItem.StyleTarget(R.string.style_cards, SurfaceId.CARDS, { actions.openStylePicker(SurfaceId.CARDS, variant) }, variant),
-                SettingItem.StyleTarget(R.string.desktop_search_bar, SurfaceId.SEARCH_BAR, { actions.openStylePicker(SurfaceId.SEARCH_BAR, variant) }, variant),
-                SettingItem.StyleTarget(R.string.drawer_search_bar, SurfaceId.DRAWER_SEARCH_BAR, { actions.openStylePicker(SurfaceId.DRAWER_SEARCH_BAR, variant) }, variant),
-                SettingItem.StyleTarget(R.string.settings, SurfaceId.SETTINGS, { actions.openStylePicker(SurfaceId.SETTINGS, variant) }, variant)
+            accentRow(context, viewModel, actions),
+            SettingItem.Header(R.string.style_group_surfaces),
+            SettingItem.Row(
+                R.string.style_group_surfaces_dark_default,
+                subtitle = { context.getString(R.string.style_surfaces_sub_summary) },
+                onClick = { actions.openSection(R.string.style_group_surfaces_dark_default) },
+                look = SettingItem.RowLook(R.drawable.ic_style_dark)
+            ),
+            SettingItem.Row(
+                R.string.style_group_surfaces_dark_amoled,
+                subtitle = { context.getString(R.string.style_surfaces_sub_summary) },
+                onClick = { actions.openSection(R.string.style_group_surfaces_dark_amoled) },
+                look = SettingItem.RowLook(R.drawable.ic_style_dark)
+            ),
+            SettingItem.Row(
+                R.string.style_group_surfaces_light_default,
+                subtitle = { context.getString(R.string.style_surfaces_sub_summary) },
+                onClick = { actions.openSection(R.string.style_group_surfaces_light_default) },
+                look = SettingItem.RowLook(R.drawable.ic_style_light)
+            ),
+            SettingItem.Row(
+                R.string.style_group_surfaces_light_frosted,
+                subtitle = { context.getString(R.string.style_surfaces_sub_summary) },
+                onClick = { actions.openSection(R.string.style_group_surfaces_light_frosted) },
+                look = SettingItem.RowLook(R.drawable.ic_style_light)
             )
-        }
+        )
     )
     }
 

@@ -107,12 +107,14 @@ object Styles {
         val accent = ThemeEngine.accentColor(context, prefs.accentColor)
         val darkBg = 0xFF0D1117.toInt()
         val darkSurface = 0xFF1A2230.toInt()
-        val themeText = if (night) 0xFFFFFFFF.toInt() else context.getColor(R.color.textPrimary)
+        val lightText = 0xFF11161D.toInt()
+        val lightSurface = 0xFFFFFFFF.toInt()
+        val themeText = if (night) 0xFFFFFFFF.toInt() else lightText
         val onWallpaper = context.getColor(R.color.onWallpaper)
         val themeSurface = if (night) {
             if (variant == ThemeStyleVariant.DARK_AMOLED) OneUiTheme.AMOLED_BLACK else darkSurface
         } else {
-            context.getColor(R.color.surface)
+            lightSurface
         }
 
         fun resolved(
@@ -152,14 +154,16 @@ object Styles {
         val drawerLegacy = LabelStyler.parseColor(
             prefs.drawerBgColor,
             if (night) (if (variant == ThemeStyleVariant.DARK_AMOLED) OneUiTheme.AMOLED_BLACK else 0xFF1E2735.toInt())
-            else context.getColor(R.color.drawerBackground)
+            else lightSurface
         )
         // The FOLDER surface colors the folder *window*, so its default is the
         // opaque theme surface; the translucent preview-plate default lives in
         // the plate drawable itself (folderMatchWindowColor pulls this color in
         // explicitly).
         val folderLegacy = LabelStyler.parseColor(
-            prefs.folderBgColor, themeSurface
+            prefs.folderBgColor,
+            if (night) themeSurface
+            else (if (variant == ThemeStyleVariant.LIGHT_FROSTED) OneUiTheme.FROSTED_SURFACE else lightSurface)
         )
 
         val drawer = resolved(
@@ -194,7 +198,7 @@ object Styles {
                 SurfaceId.SETTINGS to resolved(
                     SurfaceId.SETTINGS,
                     if (night) (if (variant == ThemeStyleVariant.DARK_AMOLED) OneUiTheme.AMOLED_BLACK else darkBg)
-                    else context.getColor(R.color.background),
+                    else 0xFFF4F5F7.toInt(),
                     themeText, null
                 ),
                 SurfaceId.HOME to resolved(

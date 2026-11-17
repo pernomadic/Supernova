@@ -80,14 +80,21 @@ object AnimationScale {
                 }
             }
         }
-        app.contentResolver.registerContentObserver(
-            Settings.Global.getUriFor(Settings.Global.ANIMATOR_DURATION_SCALE), false,
-            object : ContentObserver(main) {
-                override fun onChange(selfChange: Boolean) {
-                    systemScale = settingScale(app)
-                    apply()
-                }
+        val observer = object : ContentObserver(main) {
+            override fun onChange(selfChange: Boolean) {
+                systemScale = settingScale(app)
+                apply()
             }
+        }
+        val resolver = app.contentResolver
+        resolver.registerContentObserver(
+            Settings.Global.getUriFor(Settings.Global.ANIMATOR_DURATION_SCALE), false, observer
+        )
+        resolver.registerContentObserver(
+            Settings.Global.getUriFor(Settings.Global.TRANSITION_ANIMATION_SCALE), false, observer
+        )
+        resolver.registerContentObserver(
+            Settings.Global.getUriFor(Settings.Global.WINDOW_ANIMATION_SCALE), false, observer
         )
     }
 
@@ -97,10 +104,14 @@ object AnimationScale {
         if (Looper.myLooper() == Looper.getMainLooper()) apply() else main.post(::apply)
     }
 
-    // Puts this process's scale where it belongs now. Cheap when it already
-    // is; every activity's resume calls it, after the system's first set.
+    // Puts this process's scale where it belongs now. Respects system Developer Option
+    // scales (0.25x to 10x) for window, transition, and animator duration.
     fun apply() {
-        val wanted = if (launcherAnimations) 1f else systemScale
+        val wanted = when {
+            !launcherAnimations -> 0f
+            systemScale > 0f -> systemScale
+            else -> 1f
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && ValueAnimator.getDurationScale() == wanted) return
         val method = setter ?: return
         settingOwn = true
@@ -113,6 +124,16 @@ object AnimationScale {
         }
     }
 
-    private fun settingScale(context: Context): Float =
-        Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f)
+    private fun settingScale(context: Context): Float {
+        val resolver = context.contentResolver
+        val animator = Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f)
+        val transition = Settings.Global.getFloat(resolver, Settings.Global.TRANSITION_ANIMATION_SCALE, 1f)
+        val window = Settings.Global.getFloat(resolver, Settings.Global.WINDOW_ANIMATION_SCALE, 1f)
+        return when {
+            animator != 1f -> animator
+            transition != 1f -> transition
+            window != 1f -> window
+            else -> 1f
+        }
+    }
 }

@@ -721,7 +721,11 @@ class SettingsActivity : AppCompatActivity() {
     private val subPageParents = mapOf(
         R.string.desktop_search_bar to R.string.settings_section_home,
         R.string.drawer_search_bar to R.string.settings_section_drawer,
-        R.string.drawer_groups to R.string.settings_section_drawer
+        R.string.drawer_groups to R.string.settings_section_drawer,
+        R.string.style_group_surfaces_dark_default to R.string.style_tab,
+        R.string.style_group_surfaces_dark_amoled to R.string.style_tab,
+        R.string.style_group_surfaces_light_default to R.string.style_tab,
+        R.string.style_group_surfaces_light_frosted to R.string.style_tab
     )
 
     // The Drawer groups page is the pane's, not the list's. A search from
@@ -1444,7 +1448,10 @@ class SettingsActivity : AppCompatActivity() {
                     dp(FOLDER_PREVIEW_DP),
                     style = prefs.folderPreviewStyle,
                     plateColor = com.supernova.launcher.ui.FolderIconDrawable.plateColor(
-                        dialogBinding.matchColorCheck.isChecked, plateColor, resolved.surface
+                        dialogBinding.matchColorCheck.isChecked, plateColor, resolved.surface,
+                        com.supernova.launcher.ui.theme.OneUiTheme.defaultFolderPlateColor(
+                            com.supernova.launcher.ui.theme.OneUiTheme.activeVariant(this, prefs)
+                        )
                     ),
                     shape = com.supernova.launcher.ui.FolderIconDrawable.plateShape(shapeName, prefs),
                     customSpec = CustomShapeSpec.decode(prefs.iconShapeCustom),

@@ -30,6 +30,7 @@ enum class ThemeMode {
 // ThemeOverlay defined in themes.xml.
 @kotlinx.serialization.Serializable(with = AccentColor.Names::class)
 enum class AccentColor(val colorRes: Int, val overlayRes: Int) {
+    SYSTEM(0, 0),
     BLUE(R.color.accentBlue, R.style.ThemeOverlay_Supernova_Blue),
     INDIGO(R.color.accentIndigo, R.style.ThemeOverlay_Supernova_Indigo),
     PURPLE(R.color.accentPurple, R.style.ThemeOverlay_Supernova_Purple),
@@ -131,11 +132,24 @@ object ThemeEngine {
 
     // Call before setContentView.
     fun applyAccent(activity: Activity, accent: AccentColor) {
-        activity.theme.applyStyle(accent.overlayRes, true)
+        if (accent.overlayRes != 0) {
+            activity.theme.applyStyle(accent.overlayRes, true)
+        }
     }
 
-    fun accentColor(context: Context, accent: AccentColor): Int =
-        context.getColor(accent.colorRes)
+    fun accentColor(context: Context, accent: AccentColor): Int {
+        if (accent == AccentColor.SYSTEM) {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                return context.getColor(android.R.color.system_accent1_500)
+            }
+            val tv = android.util.TypedValue()
+            if (context.theme.resolveAttribute(android.R.attr.colorAccent, tv, true)) {
+                return if (tv.resourceId != 0) context.getColor(tv.resourceId) else tv.data
+            }
+            return context.getColor(R.color.accent)
+        }
+        return context.getColor(accent.colorRes)
+    }
 
     // The settings screens' accent: the Settings style's own Accent when one
     // is picked (any colour, #233), else the curated Accent color. Returns the

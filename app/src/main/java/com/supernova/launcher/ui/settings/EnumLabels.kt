@@ -187,6 +187,7 @@ object EnumLabels {
 
     @StringRes
     fun of(accent: AccentColor): Int = when (accent) {
+        AccentColor.SYSTEM -> R.string.accent_system
         AccentColor.BLUE -> R.string.accent_blue
         AccentColor.INDIGO -> R.string.accent_indigo
         AccentColor.PURPLE -> R.string.accent_purple

@@ -76,7 +76,9 @@ class ActionRunner(
         return when (bound.action) {
             GestureAction.NONE -> false
             GestureAction.OPEN_DRAWER -> {
-                host.openDrawer()
+                if (viewModel.state.value.prefs.homeScreenLayout != com.supernova.launcher.data.HomeScreenLayout.HOME_ONLY) {
+                    host.openDrawer()
+                }
                 true
             }
             GestureAction.EXPAND_NOTIFICATIONS -> {

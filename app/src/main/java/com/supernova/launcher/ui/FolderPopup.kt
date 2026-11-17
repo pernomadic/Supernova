@@ -73,9 +73,12 @@ class FolderPopup(private val context: Context) {
         // the card takes focus and would drop it a step late otherwise.
         anchor.hideKeyboardForWindow()
 
-        val isOneUi = mode == FolderMode.ONEUI_FULLSCREEN
-        val hideAnchor = mode == FolderMode.IMMERSIVE || isOneUi
-        if (hideAnchor) anchor.alpha = 0f
+        val isOneUi = mode == FolderMode.ONEUI_FULLSCREEN || mode == FolderMode.IMMERSIVE
+        val hideAnchor = isOneUi
+        if (hideAnchor) {
+            anchor.alpha = 0f
+            anchor.visibility = View.INVISIBLE
+        }
 
         val binding = PopupFolderBinding.inflate(LayoutInflater.from(context))
         binding.folderTitle.setText(title)
@@ -91,8 +94,11 @@ class FolderPopup(private val context: Context) {
             )
         } else if (isOneUi) {
             val density = context.resources.displayMetrics.density
+            val textLight = textColor ?: 0xFFFFFFFF.toInt()
+            val isDarkTheme = androidx.core.graphics.ColorUtils.calculateLuminance(textLight) > 0.5
+            val fallbackSurface = if (isDarkTheme) 0xFF1E2735.toInt() else 0xFFFFFFFF.toInt()
             binding.folderCard.background = com.supernova.launcher.ui.theme.SurfaceShapes.background(
-                surfaceColor ?: context.getColor(com.supernova.launcher.R.color.drawerBackground),
+                surfaceColor ?: fallbackSurface,
                 FloatArray(4) { 28f * density },
                 context.dp(28).toFloat()
             )
@@ -163,6 +169,7 @@ class FolderPopup(private val context: Context) {
                 width = gridWidth
                 height = fixedHeight
             }
+            binding.folderCard.minimumHeight = fixedHeight + context.dp(32)
             val totalPages = ceil(members.size / 16f).toInt().coerceAtLeast(1)
             fun updateDots(page: Int) {
                 if (totalPages <= 1) {
@@ -264,32 +271,25 @@ class FolderPopup(private val context: Context) {
 
         // The root always fills the window so the card can expand from the
         // icon underneath it; WINDOW mode just keeps the scrim transparent.
-        if (immersive) {
-            binding.folderScrim.setBackgroundColor(IMMERSIVE_SCRIM)
-        } else if (isOneUi) {
+        if (isOneUi) {
             val isDarkTheme = androidx.core.graphics.ColorUtils.calculateLuminance(text) > 0.5
-            val scrimColor = if (isDarkTheme) 0xD9000000.toInt() else 0xCCF2F2F2.toInt()
+            val scrimColor = if (isDarkTheme) 0xF2000000.toInt() else 0xD9EAEAEA.toInt()
             binding.folderScrim.setBackgroundColor(scrimColor)
         }
         binding.folderCard.layoutParams = FrameLayout.LayoutParams(
-            if (immersive) ViewGroup.LayoutParams.MATCH_PARENT else ViewGroup.LayoutParams.WRAP_CONTENT,
             ViewGroup.LayoutParams.WRAP_CONTENT,
-            when {
-                immersive -> Gravity.CENTER
-                isOneUi -> Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
-                else -> Gravity.TOP or Gravity.START
-            }
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            if (isOneUi) (Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL) else (Gravity.TOP or Gravity.START)
         ).apply {
-            when {
-                immersive -> setMargins(context.dp(24), context.dp(24), context.dp(24), context.dp(24))
-                isOneUi -> setMargins(context.dp(20), 0, context.dp(20), (metrics.heightPixels * 0.08f).toInt())
+            if (isOneUi) {
+                setMargins(context.dp(20), 0, context.dp(20), context.dp(72))
             }
         }
         // The card swallows taps; only true outside taps reach the scrim.
         binding.folderCard.isClickable = true
 
         // Where the card rests once positioned: over its icon in WINDOW mode,
-        // centred in IMMERSIVE.
+        // bottom half in OneUI/immersive.
         var restingY = 0f
 
         // Collapse back into the folder icon, then dismiss for real. The
@@ -298,7 +298,10 @@ class FolderPopup(private val context: Context) {
         var closing = false
         fun animateClose() {
             if (closing) return
-            if (hideAnchor) anchor.alpha = 1f
+            if (hideAnchor) {
+                anchor.alpha = 1f
+                anchor.visibility = View.VISIBLE
+            }
             if (!animate) {
                 popup.dismiss()
                 return
@@ -349,7 +352,10 @@ class FolderPopup(private val context: Context) {
         popup.setOnDismissListener {
             val newName = (if (isOneUi) binding.oneUiTitle.text else binding.folderTitle.text)?.toString().orEmpty()
             if (newName.isNotBlank() && newName != title) onRename(newName)
-            if (hideAnchor) anchor.alpha = 1f
+            if (hideAnchor) {
+                anchor.alpha = 1f
+                anchor.visibility = View.VISIBLE
+            }
             onDismiss?.invoke()
         }
 
