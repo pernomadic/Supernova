@@ -46,14 +46,14 @@ object OneUiTheme {
     const val AMOLED_CARD = 0xFF0A0A0A.toInt()
     const val AMOLED_BAR = 0xFF141414.toInt()
     const val AMOLED_POPUP = 0xFF0D0D0D.toInt()
-    const val AMOLED_FOLDER_PLATE = 0x66000000
+    const val AMOLED_FOLDER_PLATE = 0x8C050505.toInt()
 
     // Folders, search bars and surfaces
     const val FROSTED_WHITE = 0xFFFFFFFF.toInt()
     const val FROSTED_SURFACE = 0xD9FFFFFF.toInt()
     const val FROSTED_CARD = 0xF0FFFFFF.toInt()
     const val FROSTED_BAR = 0xB3FFFFFF.toInt()
-    const val FROSTED_FOLDER_PLATE = 0xB3FFFFFF.toInt()
+    const val FROSTED_FOLDER_PLATE = 0x8CFFFFFF.toInt()
 
     private const val DARK_DEFAULT_SURFACE = 0xFF1E2735.toInt()
     private const val DARK_DEFAULT_CARD = 0xFF1A2230.toInt()
@@ -65,10 +65,10 @@ object OneUiTheme {
 
     private const val LIGHT_DEFAULT_SETTINGS = 0xFFF4F5F7.toInt()
 
-    private const val PLATE_AMOLED = 0x99000000.toInt()
-    private const val PLATE_DARK_DEFAULT = 0x66000000.toInt()
-    private const val PLATE_LIGHT_FROSTED = 0xB3FFFFFF.toInt()
-    private const val PLATE_LIGHT_DEFAULT = 0x80FFFFFF.toInt()
+    private const val PLATE_AMOLED = 0x8C050505.toInt()
+    private const val PLATE_DARK_DEFAULT = 0x8C20242B.toInt()
+    private const val PLATE_LIGHT_FROSTED = 0x8CFFFFFF.toInt()
+    private const val PLATE_LIGHT_DEFAULT = 0xA6FFFFFF.toInt()
 
     fun activeVariant(context: Context, prefs: LauncherPrefs): ThemeStyleVariant {
         val night = ThemeEngine.isNight(context, prefs)

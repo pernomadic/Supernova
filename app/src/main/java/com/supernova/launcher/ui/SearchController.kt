@@ -770,11 +770,11 @@ class SearchController(
 
 
     private companion object {
-        const val SEARCH_BLUR_RADIUS = 90f
-        const val IMMERSIVE_TINT_AMOLED = 0xB3000000.toInt()
-        const val IMMERSIVE_TINT_DARK = 0x99101216.toInt()
-        const val IMMERSIVE_TINT_FROSTED = 0x99F0F2F6.toInt()
-        const val IMMERSIVE_TINT_LIGHT = 0xB3FFFFFF.toInt()
+        const val SEARCH_BLUR_RADIUS = 160f
+        const val IMMERSIVE_TINT_AMOLED = 0x80000000.toInt()
+        const val IMMERSIVE_TINT_DARK = 0x59101216.toInt()
+        const val IMMERSIVE_TINT_FROSTED = 0x4DF0F2F6.toInt()
+        const val IMMERSIVE_TINT_LIGHT = 0x59FFFFFF.toInt()
         const val DARK_LUMINANCE_THRESHOLD = 0.4
         const val OPAQUE = 255
         const val TOP_HIT_MIN_CHARS = 3

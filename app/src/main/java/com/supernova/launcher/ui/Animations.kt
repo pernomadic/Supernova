@@ -13,11 +13,17 @@ import com.supernova.launcher.data.SettingEnumSerializer
 // refuse that; an animator at scale 0 only jumps to its end, while
 // scroller-driven motion (page flips, smooth scrolls) would play on.
 object Animations {
-    fun enabled(prefs: LauncherPrefs): Boolean = !prefs.disableAnimations && ValueAnimator.areAnimatorsEnabled()
+    private const val MAX_FACTOR = 10f
+
+    fun enabled(prefs: LauncherPrefs): Boolean =
+        !prefs.disableAnimations && AnimationScale.effectiveScale() > 0f
 
     // Duration multiplier for the launcher's own animations; 0 when disabled.
+    // Respects system Developer Option scales (0.25x to 10x).
     fun factor(prefs: LauncherPrefs): Float =
-        if (!enabled(prefs)) 0f else prefs.animationSpeed.factor
+        if (!enabled(prefs)) 0f else {
+            (prefs.animationSpeed.factor * AnimationScale.effectiveScale()).coerceIn(0f, MAX_FACTOR)
+        }
 
     // Scales a base duration by the animation-speed preference.
     fun duration(prefs: LauncherPrefs, baseMs: Long): Long =

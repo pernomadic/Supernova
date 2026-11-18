@@ -30,10 +30,9 @@ class SupernovaApp : Application() {
     private fun followThemeMode() {
         MainScope().launch {
             graph.preferences.flow
-                .map { listOf(it.themeMode, it.themeScheduleStart, it.themeScheduleEnd, it.darkStyle, it.lightStyle) }
-                .distinctUntilChanged()
-                .collect {
-                    ThemeEngine.applyMode(this@SupernovaApp, graph.preferences.snapshot())
+                .collect { prefs ->
+                    currentPrefs = prefs
+                    ThemeEngine.applyMode(this@SupernovaApp, prefs)
                 }
         }
     }
@@ -59,6 +58,7 @@ class SupernovaApp : Application() {
                 preferences.applyDeviceProfileOnce(DeviceProfile.forDevice(this@SupernovaApp))
                 preferences.snapshot()
             }
+            currentPrefs = prefs
             ThemeEngine.applyMode(this@SupernovaApp, prefs)
         }
     }
@@ -80,6 +80,8 @@ class SupernovaApp : Application() {
     }
 
     companion object {
+        @Volatile var currentPrefs: com.supernova.launcher.data.LauncherPrefs? = null
+
         // Every entry opens with this marker, so a count of lines starting
         // with it is the number of crashes on record.
         const val CRASH_ENTRY = "=== "

@@ -18,6 +18,17 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputLayout
 import com.supernova.launcher.R
 
+import android.content.DialogInterface
+import android.content.res.Configuration
+import android.widget.ListView
+import android.widget.TextView
+import com.supernova.launcher.SupernovaApp
+import com.supernova.launcher.data.LauncherPrefs
+import com.supernova.launcher.ui.theme.OneUiTheme
+import com.supernova.launcher.ui.theme.SurfaceShapes
+import com.supernova.launcher.ui.theme.ThemeEngine
+import com.supernova.launcher.ui.theme.ThemeStyleVariant
+
 // The app's bottom sheets. The plate, corners and navigation-bar color come
 // from the theme's bottomSheetDialogTheme; this only fixes how a sheet opens.
 object Sheets {
@@ -31,6 +42,21 @@ object Sheets {
         BottomSheetDialog(context).apply {
             behavior.skipCollapsed = true
             behavior.state = BottomSheetBehavior.STATE_EXPANDED
+            val currentPrefs = SupernovaApp.currentPrefs
+            if (currentPrefs != null) {
+                val variant = OneUiTheme.activeVariant(context, currentPrefs)
+                val bg = when (variant) {
+                    ThemeStyleVariant.DARK_AMOLED -> OneUiTheme.AMOLED_CARD
+                    ThemeStyleVariant.DARK_DEFAULT -> 0xFF1C1C1E.toInt()
+                    ThemeStyleVariant.LIGHT_FROSTED -> 0xFFF0F2F6.toInt()
+                    ThemeStyleVariant.LIGHT_DEFAULT -> 0xFFFFFFFF.toInt()
+                }
+                setOnShowListener {
+                    findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.let { sheetView ->
+                        sheetView.backgroundTintList = ColorStateList.valueOf(bg)
+                    }
+                }
+            }
             OpenDialogs.track(this)
         }
 }
@@ -68,7 +94,64 @@ object OpenDialogs {
 }
 
 // show(), for a dialog the launcher may open: a Home press closes it.
-fun MaterialAlertDialogBuilder.showTracked(): AlertDialog = show().also(OpenDialogs::track)
+// Applies active OneUI variant styling (AMOLED, Frosted, Dark, Light) and OneUI corner radius.
+fun MaterialAlertDialogBuilder.showTracked(prefs: LauncherPrefs? = null): AlertDialog {
+    val dialog = this.create()
+    dialog.applyOneUiTheme(context, prefs)
+    dialog.show()
+    OpenDialogs.track(dialog)
+    return dialog
+}
+
+private const val DIALOG_ROUNDED_CORNER_DP = 24
+
+fun AlertDialog.applyOneUiTheme(context: Context, prefs: LauncherPrefs? = null): AlertDialog {
+    val currentPrefs = prefs ?: SupernovaApp.currentPrefs
+    val variant = if (currentPrefs != null) {
+        OneUiTheme.activeVariant(context, currentPrefs)
+    } else {
+        val nightMask = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+        if (nightMask == Configuration.UI_MODE_NIGHT_YES) {
+            ThemeStyleVariant.DARK_DEFAULT
+        } else {
+            ThemeStyleVariant.LIGHT_DEFAULT
+        }
+    }
+
+    val (bgColor, textColor, secondaryColor) = when (variant) {
+        ThemeStyleVariant.DARK_AMOLED -> Triple(OneUiTheme.AMOLED_CARD, 0xFFFFFFFF.toInt(), 0xB3FFFFFF.toInt())
+        ThemeStyleVariant.DARK_DEFAULT -> Triple(0xFF1C1C1E.toInt(), 0xFFFFFFFF.toInt(), 0xB3FFFFFF.toInt())
+        ThemeStyleVariant.LIGHT_FROSTED -> Triple(0xFFF0F2F6.toInt(), 0xFF111111.toInt(), 0xFF666666.toInt())
+        ThemeStyleVariant.LIGHT_DEFAULT -> Triple(0xFFFFFFFF.toInt(), 0xFF111111.toInt(), 0xFF666666.toInt())
+    }
+
+    window?.setBackgroundDrawable(
+        SurfaceShapes.background(bgColor, null, context.dp(DIALOG_ROUNDED_CORNER_DP).toFloat())
+    )
+
+    setOnShowListener {
+        findViewById<TextView>(androidx.appcompat.R.id.alertTitle)?.setTextColor(textColor)
+        findViewById<TextView>(android.R.id.message)?.setTextColor(secondaryColor)
+        val accent = currentPrefs?.accentColor?.let { ThemeEngine.accentColor(context, it) } ?: textColor
+        getButton(DialogInterface.BUTTON_POSITIVE)?.setTextColor(accent)
+        getButton(DialogInterface.BUTTON_NEGATIVE)?.setTextColor(secondaryColor)
+        getButton(DialogInterface.BUTTON_NEUTRAL)?.setTextColor(secondaryColor)
+
+        val listView = findViewById<ListView>(androidx.appcompat.R.id.select_dialog_listview)
+        listView?.let { list ->
+            for (i in 0 until list.childCount) {
+                (list.getChildAt(i) as? TextView)?.setTextColor(textColor)
+            }
+            list.setOnHierarchyChangeListener(object : ViewGroup.OnHierarchyChangeListener {
+                override fun onChildViewAdded(parent: View?, child: View?) {
+                    (child as? TextView)?.setTextColor(textColor)
+                }
+                override fun onChildViewRemoved(parent: View?, child: View?) = Unit
+            })
+        }
+    }
+    return this
+}
 
 // A text field for a dialog. A bare EditText handed to setView lands flush
 // against the dialog's edges with an underline and nothing else; this wraps

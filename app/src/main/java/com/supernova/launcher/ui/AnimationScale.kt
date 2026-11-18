@@ -13,21 +13,14 @@ import android.os.Looper
 import android.provider.Settings
 import android.util.Log
 
-// Supernova's animations follow its own "Disable animations" switch, not
-// the system's animation setting. Android hands every app one animator
-// duration scale; at 0 ("Remove animations", the developer option, some
-// battery savers) every animator jumps to its end. While the launcher's
-// animations are on, this process runs its animators at 1 whatever the
-// system says; with them off, it goes back to the system's own scale.
-//
-// The system sets the scale when the first window opens and again on every
-// change, so the scale is put back each time it moves (a listener on
-// Android 13+, the setting's observer and every activity's resume).
-// Should the platform refuse the call, nothing changes: Animations.enabled
-// still sees the scale at 0 and the launcher stays still, as it used to.
+// Aryonova's animations follow its own "Disable animations" switch and
+// developer options scales (0.25x to 10x) for window animation scale,
+// transition animation scale, and animator duration scale.
 object AnimationScale {
 
     private const val TAG = "AnimationScale"
+    private const val MIN_SYSTEM_SCALE = 0.25f
+    private const val MAX_SYSTEM_SCALE = 10f
 
     private val main = Handler(Looper.getMainLooper())
 
@@ -36,6 +29,10 @@ object AnimationScale {
 
     // The scale the system last gave this process.
     @Volatile private var systemScale = 1f
+
+    @Volatile private var animatorScale = 1f
+    @Volatile private var transitionScale = 1f
+    @Volatile private var windowScale = 1f
 
     // True while this object is the one setting the scale.
     @Volatile private var settingOwn = false
@@ -50,6 +47,9 @@ object AnimationScale {
         ValueAnimator::class.java.getDeclaredMethod("setDurationScale", Float::class.javaPrimitiveType)
             .apply { isAccessible = true }
     }.onFailure { Log.w(TAG, "No setDurationScale", it) }.getOrNull()
+
+    // Returns the effective scale multiplier taking developer options scale (0.25x-10x) into account.
+    fun effectiveScale(): Float = if (!launcherAnimations) 0f else systemScale.coerceIn(0f, MAX_SYSTEM_SCALE)
 
     // Whether the system's animations are off: what the first run asks about.
     fun systemAnimationsOff(context: Context): Boolean =
@@ -72,14 +72,7 @@ object AnimationScale {
             override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) = Unit
             override fun onActivityDestroyed(activity: Activity) = Unit
         })
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            ValueAnimator.registerDurationScaleChangeListener { scale ->
-                if (!settingOwn) {
-                    systemScale = scale
-                    main.post(::apply)
-                }
-            }
-        }
+
         val observer = object : ContentObserver(main) {
             override fun onChange(selfChange: Boolean) {
                 systemScale = settingScale(app)
@@ -107,11 +100,7 @@ object AnimationScale {
     // Puts this process's scale where it belongs now. Respects system Developer Option
     // scales (0.25x to 10x) for window, transition, and animator duration.
     fun apply() {
-        val wanted = when {
-            !launcherAnimations -> 0f
-            systemScale > 0f -> systemScale
-            else -> 1f
-        }
+        val wanted = if (!launcherAnimations) 0f else systemScale
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && ValueAnimator.getDurationScale() == wanted) return
         val method = setter ?: return
         settingOwn = true
@@ -129,11 +118,15 @@ object AnimationScale {
         val animator = Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f)
         val transition = Settings.Global.getFloat(resolver, Settings.Global.TRANSITION_ANIMATION_SCALE, 1f)
         val window = Settings.Global.getFloat(resolver, Settings.Global.WINDOW_ANIMATION_SCALE, 1f)
-        return when {
+        animatorScale = animator
+        transitionScale = transition
+        windowScale = window
+        val chosen = when {
             animator != 1f -> animator
             transition != 1f -> transition
             window != 1f -> window
             else -> 1f
         }
+        return if (chosen <= 0f) 0f else chosen.coerceIn(MIN_SYSTEM_SCALE, MAX_SYSTEM_SCALE)
     }
 }

@@ -18,6 +18,7 @@ import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.supernova.launcher.ui.showTracked
 import com.supernova.launcher.databinding.ActivityWallpaperCropBinding
 import com.supernova.launcher.ui.WallpaperCrop
 import com.supernova.launcher.ui.dp
@@ -109,7 +110,7 @@ class WallpaperCropActivity : AppCompatActivity() {
             .setItems(targets.map { getString(it.first) }.toTypedArray()) { _, which ->
                 setWallpaper(uri, targets[which].second)
             }
-            .show()
+            .showTracked()
     }
 
     private fun setWallpaper(uri: Uri, which: Int) {

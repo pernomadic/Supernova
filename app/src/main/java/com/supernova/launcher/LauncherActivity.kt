@@ -1048,23 +1048,31 @@ class LauncherActivity :
         } else {
             lastLaunchAnchor?.get()?.let { view ->
                 lastLaunchAnchor = null
-                view.postDelayed({
+                val prefs = viewModel.state.value.prefs
+                if (Animations.enabled(prefs)) {
+                    val duration = (ONEUI_MINIMIZE_DURATION_MS * Animations.factor(prefs)).toLong().coerceAtLeast(1L)
+                    val interpolator = PathInterpolator(ONEUI_INTERPOLATOR_X1, ONEUI_INTERPOLATOR_Y1, 0f, 1f)
                     view.scaleX = ONEUI_MINIMIZE_SCALE
                     view.scaleY = ONEUI_MINIMIZE_SCALE
                     view.alpha = ONEUI_MINIMIZE_ALPHA
                     view.animate()
                         .scaleX(1f).scaleY(1f).alpha(1f)
-                        .setDuration(ONEUI_MINIMIZE_DURATION_MS)
-                        .setInterpolator(PathInterpolator(ONEUI_INTERPOLATOR_X1, ONEUI_INTERPOLATOR_Y1, 0f, 1f))
+                        .setDuration(duration)
+                        .setInterpolator(interpolator)
                         .start()
-                }, ONEUI_MINIMIZE_DELAY_MS)
-                binding.workspacePager.scaleX = ONEUI_WORKSPACE_SETTLE_SCALE
-                binding.workspacePager.scaleY = ONEUI_WORKSPACE_SETTLE_SCALE
-                binding.workspacePager.animate()
-                    .scaleX(1f).scaleY(1f)
-                    .setDuration(ONEUI_MINIMIZE_DURATION_MS)
-                    .setInterpolator(PathInterpolator(ONEUI_INTERPOLATOR_X1, ONEUI_INTERPOLATOR_Y1, 0f, 1f))
-                    .start()
+
+                    binding.workspacePager.scaleX = ONEUI_WORKSPACE_SETTLE_SCALE
+                    binding.workspacePager.scaleY = ONEUI_WORKSPACE_SETTLE_SCALE
+                    binding.workspacePager.animate()
+                        .scaleX(1f).scaleY(1f)
+                        .setDuration(duration)
+                        .setInterpolator(interpolator)
+                        .start()
+                } else {
+                    view.scaleX = 1f
+                    view.scaleY = 1f
+                    view.alpha = 1f
+                }
             }
         }
     }
@@ -2914,10 +2922,7 @@ class LauncherActivity :
         }
         val style = prefs.launchAnimation
         if (style == LaunchAnimation.ONEUI) {
-            lastLaunchAnchor = java.lang.ref.WeakReference(anchor)
-            anchor.animate().scaleX(ONEUI_LAUNCH_PRESS_SCALE).scaleY(ONEUI_LAUNCH_PRESS_SCALE)
-                .setDuration(ONEUI_LAUNCH_PRESS_DURATION_MS).start()
-            launch(bounds, launchOptions(style, anchor))
+            launchOneUiAnimation(anchor, bounds, prefs, launch)
             return
         }
         val snapshot = if (style == LaunchAnimation.CIRCLE || style == LaunchAnimation.ADAPTIVE_ICON) {
@@ -2954,13 +2959,36 @@ class LauncherActivity :
         }
     }
 
+    private fun launchOneUiAnimation(
+        anchor: View,
+        bounds: Rect,
+        prefs: LauncherPrefs,
+        launch: (Rect?, android.os.Bundle?) -> Boolean
+    ) {
+        lastLaunchAnchor = java.lang.ref.WeakReference(anchor)
+        val pressDuration = (ONEUI_LAUNCH_PRESS_DURATION_MS * Animations.factor(prefs)).toLong()
+        anchor.animate()
+            .scaleX(ONEUI_LAUNCH_PRESS_SCALE)
+            .scaleY(ONEUI_LAUNCH_PRESS_SCALE)
+            .setDuration(pressDuration.coerceAtLeast(1L))
+            .setInterpolator(PathInterpolator(ONEUI_INTERPOLATOR_X1, ONEUI_INTERPOLATOR_Y1, 0f, 1f))
+            .start()
+        val scaleUp = android.app.ActivityOptions.makeScaleUpAnimation(
+            anchor, 0, 0, anchor.width, anchor.height
+        ).toBundle()
+        if (!launch(bounds, scaleUp)) {
+            anchor.scaleX = 1f
+            anchor.scaleY = 1f
+        }
+    }
+
     // Each style's options. Circle's is the fade the
     // app opens with once its circle has filled the screen; Adaptive icon
     // falls back to the plain scale-up when its icon can't be pictured.
     private fun launchOptions(style: LaunchAnimation, anchor: View): android.os.Bundle = when (style) {
-        LaunchAnimation.ONEUI, LaunchAnimation.SYSTEM, LaunchAnimation.REVEAL -> android.app.ActivityOptions
+        LaunchAnimation.SYSTEM, LaunchAnimation.REVEAL -> android.app.ActivityOptions
             .makeClipRevealAnimation(anchor, 0, 0, anchor.width, anchor.height)
-        LaunchAnimation.ADAPTIVE_ICON, LaunchAnimation.ZOOM -> android.app.ActivityOptions
+        LaunchAnimation.ONEUI, LaunchAnimation.ADAPTIVE_ICON, LaunchAnimation.ZOOM -> android.app.ActivityOptions
             .makeScaleUpAnimation(anchor, 0, 0, anchor.width, anchor.height)
         LaunchAnimation.CIRCLE -> android.app.ActivityOptions
             .makeCustomAnimation(this, R.anim.launch_fade_enter, R.anim.launch_fade_exit)
@@ -3079,7 +3107,7 @@ class LauncherActivity :
             .setTitle(R.string.work_apps_paused_title)
             .setPositiveButton(R.string.work_apps_turn_on) { _, _ -> viewModel.setWorkPaused(false) }
             .setNegativeButton(android.R.string.cancel, null)
-            .show()
+            .showTracked(viewModel.state.value.prefs)
     }
 
     // Fires an arbitrary intent stored on an item (an activity chosen from the
@@ -3782,7 +3810,7 @@ class LauncherActivity :
         val dialog = MaterialAlertDialogBuilder(this)
             .setTitle(R.string.move_to_drawer)
             .setView(view.root)
-            .show()
+            .showTracked(viewModel.state.value.prefs)
         view.moveCancel.setOnClickListener { dialog.dismiss() }
         view.moveConfirm.setOnClickListener {
             dialog.dismiss()
@@ -4788,7 +4816,7 @@ class LauncherActivity :
                             .onFailure { Toast.makeText(this, R.string.launch_failed, Toast.LENGTH_SHORT).show() }
                     }
                 }
-                .showTracked()
+                .showTracked(viewModel.state.value.prefs)
         }.onFailure {
             Toast.makeText(this, R.string.launch_failed, Toast.LENGTH_SHORT).show()
         }
@@ -5193,7 +5221,6 @@ class LauncherActivity :
         private const val ONEUI_INTERPOLATOR_Y1 = 0.25f
         private const val ONEUI_LAUNCH_PRESS_SCALE = 0.92f
         private const val ONEUI_LAUNCH_PRESS_DURATION_MS = 120L
-        private const val ONEUI_MINIMIZE_DELAY_MS = 60L
         private const val ONEUI_WORKSPACE_SETTLE_SCALE = 0.97f
     }
 }

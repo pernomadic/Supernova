@@ -676,10 +676,10 @@ class FeedController(
         val paneText = Styles.resolve(context, prefs).of(SurfaceId.DRAWER).text
         val variant = com.supernova.launcher.ui.theme.OneUiTheme.activeVariant(context, prefs)
         val bgTint = when (variant) {
-            com.supernova.launcher.ui.theme.ThemeStyleVariant.DARK_AMOLED -> 0xCC000000.toInt()
-            com.supernova.launcher.ui.theme.ThemeStyleVariant.DARK_DEFAULT -> 0x8C000000.toInt()
-            com.supernova.launcher.ui.theme.ThemeStyleVariant.LIGHT_FROSTED -> 0x73FFFFFF.toInt()
-            com.supernova.launcher.ui.theme.ThemeStyleVariant.LIGHT_DEFAULT -> 0x80F2F2F7.toInt()
+            com.supernova.launcher.ui.theme.ThemeStyleVariant.DARK_AMOLED -> 0x80000000.toInt()
+            com.supernova.launcher.ui.theme.ThemeStyleVariant.DARK_DEFAULT -> 0x59000000.toInt()
+            com.supernova.launcher.ui.theme.ThemeStyleVariant.LIGHT_FROSTED -> 0x40FFFFFF.toInt()
+            com.supernova.launcher.ui.theme.ThemeStyleVariant.LIGHT_DEFAULT -> 0x4DEDEFEA.toInt()
         }
         pane.root.setBackgroundColor(bgTint)
         val cards = resolved.of(SurfaceId.CARDS)
@@ -714,6 +714,6 @@ class FeedController(
         const val OPEN_MS = 220L
         const val CLOSE_MS = 180L
         const val FEED_BLUR_THRESHOLD = 0.01f
-        const val FEED_MAX_BLUR_RADIUS = 120f
+        const val FEED_MAX_BLUR_RADIUS = 160f
     }
 }
