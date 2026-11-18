@@ -241,6 +241,11 @@ class SearchController(
             binding.dockBar.setRenderEffect(effect)
             binding.desktopSearchBar.setRenderEffect(effect)
             binding.desktopSearchWidget.setRenderEffect(effect)
+            val win = (binding.root.context as? android.app.Activity)?.window
+            win?.addFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+            win?.attributes = win?.attributes?.apply {
+                setBlurBehindRadius(searchBlur.toInt())
+            }
         }
         showZeroState()
         loadRecentQueries()
@@ -279,6 +284,11 @@ class SearchController(
             binding.dockBar.setRenderEffect(null)
             binding.desktopSearchBar.setRenderEffect(null)
             binding.desktopSearchWidget.setRenderEffect(null)
+            val win = (binding.root.context as? android.app.Activity)?.window
+            win?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+            win?.attributes = win?.attributes?.apply {
+                setBlurBehindRadius(0)
+            }
         }
         onHidden()
         val ui = overlay ?: return

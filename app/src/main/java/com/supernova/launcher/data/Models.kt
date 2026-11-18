@@ -365,7 +365,7 @@ data class LauncherPrefs(
     // The folder window's app count, between its name and its menu button.
     val folderShowCount: Boolean = false,
     // WINDOW = anchored popup card; IMMERSIVE = full-screen folder (FolderMode).
-    val folderMode: FolderMode = FolderMode.WINDOW,
+    val folderMode: FolderMode = FolderMode.ONEUI_FULLSCREEN,
     // Drop shadow under the folder card. Off flattens it onto the wallpaper,
     // which is what a translucent folder surface usually wants.
     val folderShadow: Boolean = true,

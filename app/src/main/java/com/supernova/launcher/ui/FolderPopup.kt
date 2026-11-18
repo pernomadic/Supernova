@@ -88,15 +88,7 @@ class FolderPopup(private val context: Context) {
         binding.folderTitle.setText(title)
         binding.oneUiTitle.setText(title)
 
-        if (cornerRadiiDp != null) {
-            // Style-engine corners replace the stock drawable outright.
-            val density = context.resources.displayMetrics.density
-            binding.folderCard.background = com.supernova.launcher.ui.theme.SurfaceShapes.background(
-                surfaceColor ?: context.getColor(com.supernova.launcher.R.color.drawerBackground),
-                FloatArray(4) { cornerRadiiDp[it] * density },
-                context.dp(if (isOneUi) CORNER_RADIUS_ONEUI_DP else CORNER_RADIUS_WINDOW_DP).toFloat()
-            )
-        } else if (isOneUi) {
+        if (isOneUi) {
             val density = context.resources.displayMetrics.density
             val isDarkTheme = variant?.isDark ?: (textColor?.let {
                 androidx.core.graphics.ColorUtils.calculateLuminance(it) > LUMINANCE_THRESHOLD
@@ -108,15 +100,29 @@ class FolderPopup(private val context: Context) {
                 com.supernova.launcher.ui.theme.ThemeStyleVariant.LIGHT_DEFAULT -> ONEUI_CARD_LIGHT
                 null -> if (isDarkTheme) ONEUI_CARD_DARK else ONEUI_CARD_LIGHT
             }
-            val resolvedSurface = if (surfaceColor != null && surfaceColor != ONEUI_DEFAULT_DRAWER_SURFACE) {
+            val resolvedSurface = if (surfaceColor != null && surfaceColor != ONEUI_DEFAULT_DRAWER_SURFACE &&
+                surfaceColor != context.getColor(com.supernova.launcher.R.color.drawerBackground)
+            ) {
                 surfaceColor
             } else {
                 defaultOneUiSurface
             }
+            val radii = if (cornerRadiiDp != null) {
+                FloatArray(4) { cornerRadiiDp[it] * density }
+            } else {
+                FloatArray(4) { CORNER_RADIUS_ONEUI_DP.toFloat() * density }
+            }
             binding.folderCard.background = com.supernova.launcher.ui.theme.SurfaceShapes.background(
                 resolvedSurface,
-                FloatArray(4) { CORNER_RADIUS_ONEUI_DP.toFloat() * density },
+                radii,
                 context.dp(CORNER_RADIUS_ONEUI_DP).toFloat()
+            )
+        } else if (cornerRadiiDp != null) {
+            val density = context.resources.displayMetrics.density
+            binding.folderCard.background = com.supernova.launcher.ui.theme.SurfaceShapes.background(
+                surfaceColor ?: context.getColor(com.supernova.launcher.R.color.drawerBackground),
+                FloatArray(4) { cornerRadiiDp[it] * density },
+                context.dp(CORNER_RADIUS_WINDOW_DP).toFloat()
             )
         } else {
             surfaceColor?.let { color ->
@@ -254,13 +260,20 @@ class FolderPopup(private val context: Context) {
             binding.folderEditButton.setOnClickListener { onMenu(it) }
         }
 
-        val decorView = (context as? android.app.Activity)?.window?.decorView ?: anchor.rootView
+        val activity = context as? android.app.Activity
+        val decorView = activity?.window?.decorView ?: anchor.rootView
         if (isOneUi && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
             decorView.setRenderEffect(
                 android.graphics.RenderEffect.createBlurEffect(
                     blurIntensity, blurIntensity, android.graphics.Shader.TileMode.CLAMP
                 )
             )
+            activity?.window?.let { win ->
+                win.addFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+                win.attributes = win.attributes.apply {
+                    setBlurBehindRadius(blurIntensity.toInt())
+                }
+            }
         }
 
         val popup = PopupWindow(
@@ -364,6 +377,12 @@ class FolderPopup(private val context: Context) {
         fun clearBlur() {
             if (isOneUi && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
                 decorView.setRenderEffect(null)
+                activity?.window?.let { win ->
+                    win.clearFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+                    win.attributes = win.attributes.apply {
+                        setBlurBehindRadius(0)
+                    }
+                }
             }
             blurIntensity = FOLDER_BLUR_RADIUS
         }
@@ -554,6 +573,18 @@ class FolderPopup(private val context: Context) {
         }
 
         popup.showAtLocation(anchor.rootView, Gravity.TOP or Gravity.START, 0, 0)
+        if (isOneUi && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            binding.root.post {
+                val decor = binding.root.rootView
+                val lp = decor.layoutParams as? android.view.WindowManager.LayoutParams
+                if (lp != null) {
+                    lp.flags = lp.flags or android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND
+                    lp.setBlurBehindRadius(blurIntensity.toInt())
+                    (context.getSystemService(Context.WINDOW_SERVICE) as? android.view.WindowManager)
+                        ?.updateViewLayout(decor, lp)
+                }
+            }
+        }
         return popup
     }
 

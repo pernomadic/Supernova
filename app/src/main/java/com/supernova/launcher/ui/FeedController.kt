@@ -214,13 +214,22 @@ class FeedController(
             view.alpha = 1f
         }
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            val win = (binding.root.context as? android.app.Activity)?.window
             if (shown > FEED_BLUR_THRESHOLD) {
                 val blur = maxBlurRadius() * shown.coerceIn(0f, 1f)
                 binding.workspacePager.setRenderEffect(
                     android.graphics.RenderEffect.createBlurEffect(blur, blur, android.graphics.Shader.TileMode.CLAMP)
                 )
+                win?.addFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+                win?.attributes = win?.attributes?.apply {
+                    setBlurBehindRadius(blur.toInt())
+                }
             } else {
                 binding.workspacePager.setRenderEffect(null)
+                win?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+                win?.attributes = win?.attributes?.apply {
+                    setBlurBehindRadius(0)
+                }
             }
         }
     }
