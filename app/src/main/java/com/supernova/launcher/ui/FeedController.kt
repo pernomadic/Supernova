@@ -714,6 +714,6 @@ class FeedController(
         const val OPEN_MS = 220L
         const val CLOSE_MS = 180L
         const val FEED_BLUR_THRESHOLD = 0.01f
-        const val FEED_MAX_BLUR_RADIUS = 160f
+        const val FEED_MAX_BLUR_RADIUS = 225f
     }
 }

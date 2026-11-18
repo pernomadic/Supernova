@@ -671,7 +671,7 @@ class FolderPopup(private val context: Context) {
         private const val ONEUI_CARD_LIGHT = 0xA6FFFFFF.toInt()
         private const val ONEUI_CARD_FROSTED_LIGHT = 0x8CFFFFFF.toInt()
         private const val ONEUI_DEFAULT_DRAWER_SURFACE = 0xFF1E2735.toInt()
-        private const val FOLDER_BLUR_RADIUS = 160f
+        private const val FOLDER_BLUR_RADIUS = 225f
         private const val ONEUI_INITIAL_SCALE = 0.82f
         private const val ONEUI_BTN_INITIAL_SCALE = 0.5f
         private const val ONEUI_HEADER_TRANSLATION_DP = 16

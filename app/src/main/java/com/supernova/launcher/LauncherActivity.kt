@@ -45,6 +45,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.supernova.launcher.data.HomeScreenLayout
+import com.supernova.launcher.ui.OneUiMinimizeTransition
 import com.supernova.launcher.ui.ShortcutItem
 import com.supernova.launcher.ui.dp
 import com.supernova.launcher.ui.showTracked
@@ -955,6 +956,9 @@ class LauncherActivity :
     private var lastUserPresentTime = 0L
     private var wasKeyguardLocked = false
     private var lastLaunchAnchor: java.lang.ref.WeakReference<View>? = null
+    private var lastLaunchBounds: Rect? = null
+    private var lastLaunchSnapshot: Bitmap? = null
+    private var lastLaunchColor: Int = android.graphics.Color.DKGRAY
     private val screenOffReceiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(context: android.content.Context, intent: Intent) {
             when (intent.action) {
@@ -1046,33 +1050,32 @@ class LauncherActivity :
             lastUserPresentTime = 0L
             binding.root.post { playUnlockEntranceAnimation() }
         } else {
-            lastLaunchAnchor?.get()?.let { view ->
-                lastLaunchAnchor = null
-                val prefs = viewModel.state.value.prefs
-                if (Animations.enabled(prefs)) {
-                    val duration = (ONEUI_MINIMIZE_DURATION_MS * Animations.factor(prefs)).toLong().coerceAtLeast(1L)
-                    val interpolator = PathInterpolator(ONEUI_INTERPOLATOR_X1, ONEUI_INTERPOLATOR_Y1, 0f, 1f)
-                    view.scaleX = ONEUI_MINIMIZE_SCALE
-                    view.scaleY = ONEUI_MINIMIZE_SCALE
-                    view.alpha = ONEUI_MINIMIZE_ALPHA
-                    view.animate()
-                        .scaleX(1f).scaleY(1f).alpha(1f)
-                        .setDuration(duration)
-                        .setInterpolator(interpolator)
-                        .start()
+            val anchor = lastLaunchAnchor?.get()
+            val bounds = lastLaunchBounds
+            val snapshot = lastLaunchSnapshot
+            val dominant = lastLaunchColor
+            val prefs = viewModel.state.value.prefs
+            lastLaunchAnchor = null
+            lastLaunchBounds = null
+            lastLaunchSnapshot = null
 
-                    binding.workspacePager.scaleX = ONEUI_WORKSPACE_SETTLE_SCALE
-                    binding.workspacePager.scaleY = ONEUI_WORKSPACE_SETTLE_SCALE
-                    binding.workspacePager.animate()
-                        .scaleX(1f).scaleY(1f)
-                        .setDuration(duration)
-                        .setInterpolator(interpolator)
-                        .start()
-                } else {
-                    view.scaleX = 1f
-                    view.scaleY = 1f
-                    view.alpha = 1f
-                }
+            if (bounds != null && prefs.launchAnimation == LaunchAnimation.ONEUI && Animations.enabled(prefs)) {
+                OneUiMinimizeTransition.play(
+                    root = binding.root,
+                    workspace = binding.workspacePager,
+                    dock = if (binding.dockBar.isVisible) binding.dockBar else null,
+                    target = OneUiMinimizeTransition.TargetAnchor(
+                        view = anchor,
+                        boundsOnScreen = bounds,
+                        bitmap = snapshot,
+                        dominantColor = dominant
+                    ),
+                    speedFactor = Animations.factor(prefs)
+                )
+            } else if (anchor != null) {
+                anchor.scaleX = 1f
+                anchor.scaleY = 1f
+                anchor.alpha = 1f
             }
         }
     }
@@ -2966,6 +2969,11 @@ class LauncherActivity :
         launch: (Rect?, android.os.Bundle?) -> Boolean
     ) {
         lastLaunchAnchor = java.lang.ref.WeakReference(anchor)
+        lastLaunchBounds = Rect(bounds)
+        val snapshot = runLogged("draw launch icon") { anchor.drawToBitmap() }.getOrNull()
+        lastLaunchSnapshot = snapshot
+        lastLaunchColor = snapshot?.let { viewModel.appCatalog().dominantColorOf(it) } ?: android.graphics.Color.DKGRAY
+
         val pressDuration = (ONEUI_LAUNCH_PRESS_DURATION_MS * Animations.factor(prefs)).toLong()
         anchor.animate()
             .scaleX(ONEUI_LAUNCH_PRESS_SCALE)
@@ -2979,6 +2987,9 @@ class LauncherActivity :
         if (!launch(bounds, scaleUp)) {
             anchor.scaleX = 1f
             anchor.scaleY = 1f
+            lastLaunchAnchor = null
+            lastLaunchBounds = null
+            lastLaunchSnapshot = null
         }
     }
 
@@ -5214,13 +5225,9 @@ class LauncherActivity :
         private const val UNLOCK_PATH_X1 = 0.22f
         private const val UNLOCK_PATH_Y1 = 0.25f
         private const val UNLOCK_WINDOW_MS = 600L
-        private const val ONEUI_MINIMIZE_SCALE = 1.15f
-        private const val ONEUI_MINIMIZE_ALPHA = 0.7f
-        private const val ONEUI_MINIMIZE_DURATION_MS = 240L
         private const val ONEUI_INTERPOLATOR_X1 = 0.22f
         private const val ONEUI_INTERPOLATOR_Y1 = 0.25f
         private const val ONEUI_LAUNCH_PRESS_SCALE = 0.92f
         private const val ONEUI_LAUNCH_PRESS_DURATION_MS = 120L
-        private const val ONEUI_WORKSPACE_SETTLE_SCALE = 0.97f
     }
 }

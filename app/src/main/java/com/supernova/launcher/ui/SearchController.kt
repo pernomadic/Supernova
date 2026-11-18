@@ -770,7 +770,7 @@ class SearchController(
 
 
     private companion object {
-        const val SEARCH_BLUR_RADIUS = 160f
+        const val SEARCH_BLUR_RADIUS = 225f
         const val IMMERSIVE_TINT_AMOLED = 0x80000000.toInt()
         const val IMMERSIVE_TINT_DARK = 0x59101216.toInt()
         const val IMMERSIVE_TINT_FROSTED = 0x4DF0F2F6.toInt()
