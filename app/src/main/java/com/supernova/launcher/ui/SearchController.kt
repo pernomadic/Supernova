@@ -227,9 +227,16 @@ class SearchController(
         isOpen = true
         onShown(!windowMode())
         if (!windowMode() && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            val variant = com.supernova.launcher.ui.theme.OneUiTheme.activeVariant(
+                binding.root.context, viewModel.state.value.prefs
+            )
+            val config = com.supernova.launcher.ui.theme.StyleConfig.decode(viewModel.state.value.prefs.styleConfig)
+            val searchBlur = config.styleFor(
+                com.supernova.launcher.ui.theme.SurfaceId.SEARCH_BAR, variant
+            ).blur?.toFloat() ?: SEARCH_BLUR_RADIUS
             binding.workspacePager.setRenderEffect(
                 android.graphics.RenderEffect.createBlurEffect(
-                    SEARCH_BLUR_RADIUS, SEARCH_BLUR_RADIUS, android.graphics.Shader.TileMode.CLAMP
+                    searchBlur, searchBlur, android.graphics.Shader.TileMode.CLAMP
                 )
             )
         }
@@ -770,7 +777,7 @@ class SearchController(
 
 
     private companion object {
-        const val SEARCH_BLUR_RADIUS = 225f
+        const val SEARCH_BLUR_RADIUS = 90f
         const val IMMERSIVE_TINT_AMOLED = 0x80000000.toInt()
         const val IMMERSIVE_TINT_DARK = 0x59101216.toInt()
         const val IMMERSIVE_TINT_FROSTED = 0x4DF0F2F6.toInt()

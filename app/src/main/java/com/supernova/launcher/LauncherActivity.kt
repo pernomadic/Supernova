@@ -4196,6 +4196,11 @@ class LauncherActivity :
 
         animateWallpaperZoom(1f)
         val prefs = viewModel.state.value.prefs
+        val folderVariant = com.supernova.launcher.ui.theme.OneUiTheme.activeVariant(this, prefs)
+        val folderStyleConfig = com.supernova.launcher.ui.theme.StyleConfig.decode(prefs.styleConfig)
+        folderPopup.blurIntensity = folderStyleConfig.styleFor(
+            com.supernova.launcher.ui.theme.SurfaceId.FOLDER, folderVariant
+        ).blur?.toFloat() ?: FolderPopup.FOLDER_BLUR_RADIUS
         popup = folderPopup.show(
             anchor = anchor,
             title = folder.label,
@@ -4419,6 +4424,11 @@ class LauncherActivity :
                 }
             }
         }
+        val drawerFolderVariant = com.supernova.launcher.ui.theme.OneUiTheme.activeVariant(this, prefs)
+        val drawerFolderStyleConfig = com.supernova.launcher.ui.theme.StyleConfig.decode(prefs.styleConfig)
+        folderPopup.blurIntensity = drawerFolderStyleConfig.styleFor(
+            com.supernova.launcher.ui.theme.SurfaceId.FOLDER, drawerFolderVariant
+        ).blur?.toFloat() ?: FolderPopup.FOLDER_BLUR_RADIUS
         popup = folderPopup.show(
             anchor = anchor,
             title = group.name,

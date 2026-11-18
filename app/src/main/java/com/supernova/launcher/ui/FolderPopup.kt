@@ -26,6 +26,8 @@ import kotlin.math.min
 // out of the folder icon that was tapped and collapses back into it.
 class FolderPopup(private val context: Context) {
 
+    var blurIntensity: Float = FOLDER_BLUR_RADIUS
+
     @Suppress("LongParameterList", "LongMethod", "CyclomaticComplexMethod")
     fun show(
         anchor: View,
@@ -256,7 +258,7 @@ class FolderPopup(private val context: Context) {
         if (isOneUi && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
             decorView.setRenderEffect(
                 android.graphics.RenderEffect.createBlurEffect(
-                    FOLDER_BLUR_RADIUS, FOLDER_BLUR_RADIUS, android.graphics.Shader.TileMode.CLAMP
+                    blurIntensity, blurIntensity, android.graphics.Shader.TileMode.CLAMP
                 )
             )
         }
@@ -363,6 +365,7 @@ class FolderPopup(private val context: Context) {
             if (isOneUi && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
                 decorView.setRenderEffect(null)
             }
+            blurIntensity = FOLDER_BLUR_RADIUS
         }
 
         fun animateClose() {
@@ -671,7 +674,7 @@ class FolderPopup(private val context: Context) {
         private const val ONEUI_CARD_LIGHT = 0xA6FFFFFF.toInt()
         private const val ONEUI_CARD_FROSTED_LIGHT = 0x8CFFFFFF.toInt()
         private const val ONEUI_DEFAULT_DRAWER_SURFACE = 0xFF1E2735.toInt()
-        private const val FOLDER_BLUR_RADIUS = 225f
+        const val FOLDER_BLUR_RADIUS = 90f
         private const val ONEUI_INITIAL_SCALE = 0.82f
         private const val ONEUI_BTN_INITIAL_SCALE = 0.5f
         private const val ONEUI_HEADER_TRANSLATION_DP = 16

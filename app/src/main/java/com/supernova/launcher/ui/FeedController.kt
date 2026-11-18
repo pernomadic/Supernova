@@ -215,7 +215,7 @@ class FeedController(
         }
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
             if (shown > FEED_BLUR_THRESHOLD) {
-                val blur = FEED_MAX_BLUR_RADIUS * shown.coerceIn(0f, 1f)
+                val blur = maxBlurRadius() * shown.coerceIn(0f, 1f)
                 binding.workspacePager.setRenderEffect(
                     android.graphics.RenderEffect.createBlurEffect(blur, blur, android.graphics.Shader.TileMode.CLAMP)
                 )
@@ -246,7 +246,7 @@ class FeedController(
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
                     val currentShown = offset / width.coerceAtLeast(1f)
                     if (currentShown > FEED_BLUR_THRESHOLD) {
-                        val blur = FEED_MAX_BLUR_RADIUS * currentShown.coerceIn(0f, 1f)
+                        val blur = maxBlurRadius() * currentShown.coerceIn(0f, 1f)
                         binding.workspacePager.setRenderEffect(
                             android.graphics.RenderEffect.createBlurEffect(
                                 blur, blur, android.graphics.Shader.TileMode.CLAMP
@@ -707,6 +707,16 @@ class FeedController(
         pane.feedHeaderRow.visibility = if (viewModel.state.value.prefs.feedShowSearch) View.VISIBLE else View.GONE
     }
 
+    private fun maxBlurRadius(): Float {
+        val variant = com.supernova.launcher.ui.theme.OneUiTheme.activeVariant(
+            binding.root.context, viewModel.state.value.prefs
+        )
+        val config = com.supernova.launcher.ui.theme.StyleConfig.decode(viewModel.state.value.prefs.styleConfig)
+        return config.styleFor(
+            com.supernova.launcher.ui.theme.SurfaceId.CARDS, variant
+        ).blur?.toFloat() ?: FEED_MAX_BLUR_RADIUS
+    }
+
     private companion object {
         // Horizontal must beat vertical by this much before a drag is ours.
         const val DIRECTION_BIAS = 2f
@@ -714,6 +724,6 @@ class FeedController(
         const val OPEN_MS = 220L
         const val CLOSE_MS = 180L
         const val FEED_BLUR_THRESHOLD = 0.01f
-        const val FEED_MAX_BLUR_RADIUS = 225f
+        const val FEED_MAX_BLUR_RADIUS = 90f
     }
 }

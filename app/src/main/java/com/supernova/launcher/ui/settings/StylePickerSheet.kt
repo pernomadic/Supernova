@@ -47,6 +47,7 @@ object StylePickerSheet {
     )
 
     private enum class Slot { SURFACE, TEXT, ACCENT }
+    private const val DEFAULT_BLUR_PERCENT = 90
 
     // The home bar's opacity is on its own page, with its radius.
     private val OPACITY_SURFACES = setOf(
@@ -338,21 +339,21 @@ object StylePickerSheet {
             binding.opacityRow.visibility = android.view.View.GONE
         }
 
-        val blurPercent = style.blur ?: 0
+        val blurPercent = style.blur ?: DEFAULT_BLUR_PERCENT
         binding.blurSeek.progress = blurPercent
         binding.blurValue.text = context.getString(R.string.blur_percent, blurPercent)
         binding.blurSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
                 binding.blurValue.text = context.getString(R.string.blur_percent, progress)
                 if (fromUser) {
-                    style = style.copy(blur = progress.takeIf { it > 0 })
+                    style = style.copy(blur = progress)
                     persist()
                 }
             }
 
             override fun onStartTrackingTouch(seekBar: SeekBar) = Unit
             override fun onStopTrackingTouch(seekBar: SeekBar) {
-                style = style.copy(blur = seekBar.progress.takeIf { it > 0 })
+                style = style.copy(blur = seekBar.progress)
                 persist()
             }
         })
