@@ -97,6 +97,7 @@ object EnumLabels {
         LaunchAnimation.ZOOM -> R.string.anim_zoom
         LaunchAnimation.BLINK -> R.string.anim_blink
         LaunchAnimation.SLIDE_LEFT -> R.string.anim_slide_left
+        LaunchAnimation.ONEUI -> R.string.anim_oneui
     }
 
     // LIGHT means the light-bar appearance flag (dark icons) and vice versa;

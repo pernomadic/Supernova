@@ -238,6 +238,9 @@ fun openSamsungFinder(context: Context) {
     }
 }
 
+private const val DAY_START_HOUR = 6
+private const val DAY_END_HOUR = 19
+
 @DrawableRes
 private fun resolveIcon(chip: SearchBarChip, colored: Boolean): Int? = when (chip) {
     SearchBarChip.VOICE -> R.drawable.ic_mic
@@ -246,7 +249,15 @@ private fun resolveIcon(chip: SearchBarChip, colored: Boolean): Int? = when (chi
     SearchBarChip.PLAY_STORE -> if (colored) R.drawable.ic_play_store_color else R.drawable.ic_play_store
     SearchBarChip.SETTINGS -> R.drawable.ic_tab_settings
     SearchBarChip.CHROME -> if (colored) R.drawable.ic_chrome_color else R.drawable.ic_chrome
-    SearchBarChip.WEATHER -> if (colored) R.drawable.ic_weather_color else R.drawable.ic_weather
+    SearchBarChip.WEATHER -> {
+        val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+        val isNight = hour < DAY_START_HOUR || hour >= DAY_END_HOUR
+        if (colored) {
+            if (isNight) R.drawable.ic_weather_color_night else R.drawable.ic_weather_color
+        } else {
+            if (isNight) R.drawable.ic_weather_night else R.drawable.ic_weather
+        }
+    }
 }
 
 private fun borderlessRipple(context: Context) =

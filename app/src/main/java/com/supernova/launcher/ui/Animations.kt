@@ -79,7 +79,10 @@ enum class LaunchAnimation {
     // Ice Cream Sandwich style: the launcher blinks out, then the app opens.
     BLINK,
     // The app slides in from the right over the sinking launcher.
-    SLIDE_LEFT;
+    SLIDE_LEFT,
+    // Samsung OneUI style: app gracefully maximizes from its icon to fullscreen,
+    // and minimizes back into the icon on return.
+    ONEUI;
 
     // Its name in the store and in a backup, read back leniently.
     object Names : SettingEnumSerializer<LaunchAnimation>("LaunchAnimation", entries, ADAPTIVE_ICON)

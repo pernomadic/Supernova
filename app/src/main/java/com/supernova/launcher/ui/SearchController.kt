@@ -226,6 +226,13 @@ class SearchController(
         }
         isOpen = true
         onShown(!windowMode())
+        if (!windowMode() && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            binding.workspacePager.setRenderEffect(
+                android.graphics.RenderEffect.createBlurEffect(
+                    SEARCH_BLUR_RADIUS, SEARCH_BLUR_RADIUS, android.graphics.Shader.TileMode.CLAMP
+                )
+            )
+        }
         showZeroState()
         loadRecentQueries()
         ui.root.visibility = View.VISIBLE
@@ -258,6 +265,9 @@ class SearchController(
     fun hide() {
         if (!isOpen) return
         isOpen = false
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            binding.workspacePager.setRenderEffect(null)
+        }
         onHidden()
         val ui = overlay ?: return
         overlaySurface?.orchestrator?.cancel()
@@ -671,7 +681,7 @@ class SearchController(
             )
             ui.root.clipToOutline = true
         } else {
-            ui.root.setBackgroundColor(resolved.surface)
+            ui.root.setBackgroundColor(android.graphics.Color.TRANSPARENT)
             ui.root.clipToOutline = false
         }
         ui.searchPill.background = windowBarBackground(prefs, bar)
@@ -730,6 +740,7 @@ class SearchController(
 
 
     private companion object {
+        const val SEARCH_BLUR_RADIUS = 90f
         const val DARK_LUMINANCE_THRESHOLD = 0.4
         const val OPAQUE = 255
         const val TOP_HIT_MIN_CHARS = 3

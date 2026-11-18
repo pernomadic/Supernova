@@ -104,6 +104,24 @@ class AppChecklist<T>(
             }
             .create()
         dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+        val prefs = runCatching {
+            (context.applicationContext as? com.supernova.launcher.SupernovaApp)?.graph?.preferences?.latest
+        }.getOrNull()
+        if (prefs != null) {
+            val variant = com.supernova.launcher.ui.theme.OneUiTheme.activeVariant(context, prefs)
+            val bg = when (variant) {
+                com.supernova.launcher.ui.theme.ThemeStyleVariant.DARK_AMOLED ->
+                    com.supernova.launcher.ui.theme.OneUiTheme.AMOLED_BLACK
+                com.supernova.launcher.ui.theme.ThemeStyleVariant.DARK_DEFAULT -> BG_DARK_DEFAULT
+                com.supernova.launcher.ui.theme.ThemeStyleVariant.LIGHT_FROSTED -> BG_LIGHT_FROSTED
+                com.supernova.launcher.ui.theme.ThemeStyleVariant.LIGHT_DEFAULT -> BG_LIGHT_DEFAULT
+            }
+            dialog.window?.setBackgroundDrawable(
+                com.supernova.launcher.ui.theme.SurfaceShapes.background(
+                    bg, null, context.dp(DIALOG_CORNER_RADIUS_DP).toFloat()
+                )
+            )
+        }
         dialog.show()
         OpenDialogs.track(dialog)
         return dialog
@@ -203,5 +221,9 @@ class AppChecklist<T>(
         const val TITLE_PAD_H_DP = 24
         const val TITLE_PAD_TOP_DP = 16
         const val TITLE_FIELD_PAD_V_DP = 8
+        const val DIALOG_CORNER_RADIUS_DP = 24
+        const val BG_DARK_DEFAULT = 0xFF1A2230.toInt()
+        const val BG_LIGHT_FROSTED = 0xFFF0F2F6.toInt()
+        const val BG_LIGHT_DEFAULT = 0xFFFFFFFF.toInt()
     }
 }

@@ -26,6 +26,7 @@ import kotlin.math.min
 // out of the folder icon that was tapped and collapses back into it.
 class FolderPopup(private val context: Context) {
 
+    @Suppress("LongParameterList", "LongMethod", "CyclomaticComplexMethod")
     fun show(
         anchor: View,
         title: String,
@@ -67,7 +68,8 @@ class FolderPopup(private val context: Context) {
         onRename: (String) -> Unit,
         // The title row's overflow button, handed over to anchor a menu on.
         onMenu: ((View) -> Unit)? = null,
-        onDismiss: (() -> Unit)? = null
+        onDismiss: (() -> Unit)? = null,
+        variant: com.supernova.launcher.ui.theme.ThemeStyleVariant? = null
     ): PopupWindow {
         // A drawer folder can be opened with the drawer's search keyboard up;
         // the card takes focus and would drop it a step late otherwise.
@@ -94,9 +96,16 @@ class FolderPopup(private val context: Context) {
             )
         } else if (isOneUi) {
             val density = context.resources.displayMetrics.density
-            val textLight = textColor ?: 0xFFFFFFFF.toInt()
-            val isDarkTheme = androidx.core.graphics.ColorUtils.calculateLuminance(textLight) > LUMINANCE_THRESHOLD
-            val defaultOneUiSurface = if (isDarkTheme) ONEUI_FALLBACK_DARK else ONEUI_FALLBACK_LIGHT
+            val isDarkTheme = variant?.isDark ?: (textColor?.let {
+                androidx.core.graphics.ColorUtils.calculateLuminance(it) > LUMINANCE_THRESHOLD
+            } ?: false)
+            val defaultOneUiSurface = when (variant) {
+                com.supernova.launcher.ui.theme.ThemeStyleVariant.DARK_AMOLED -> ONEUI_CARD_AMOLED
+                com.supernova.launcher.ui.theme.ThemeStyleVariant.DARK_DEFAULT -> ONEUI_CARD_DARK
+                com.supernova.launcher.ui.theme.ThemeStyleVariant.LIGHT_FROSTED -> ONEUI_CARD_FROSTED_LIGHT
+                com.supernova.launcher.ui.theme.ThemeStyleVariant.LIGHT_DEFAULT -> ONEUI_CARD_LIGHT
+                null -> if (isDarkTheme) ONEUI_CARD_DARK else ONEUI_CARD_LIGHT
+            }
             val resolvedSurface = if (surfaceColor != null && surfaceColor != ONEUI_DEFAULT_DRAWER_SURFACE) {
                 surfaceColor
             } else {
@@ -116,7 +125,10 @@ class FolderPopup(private val context: Context) {
         }
         // The title row reads on the card's own color: a fixed hint was white
         // on the light theme's white card, so an unnamed folder showed nothing.
-        val text = textColor ?: context.getColor(com.supernova.launcher.R.color.textPrimary)
+        val isDarkTheme = variant?.isDark ?: (textColor?.let {
+            androidx.core.graphics.ColorUtils.calculateLuminance(it) > LUMINANCE_THRESHOLD
+        } ?: false)
+        val text = textColor ?: (if (isDarkTheme) android.graphics.Color.WHITE else 0xFF11161D.toInt())
         binding.folderTitle.setTextColor(text)
         binding.folderTitle.setHintTextColor(androidx.core.graphics.ColorUtils.setAlphaComponent(text, HINT_ALPHA))
         binding.folderCount.setTextColor(androidx.core.graphics.ColorUtils.setAlphaComponent(text, COUNT_ALPHA))
@@ -237,6 +249,15 @@ class FolderPopup(private val context: Context) {
             binding.folderEditButton.setOnClickListener { onMenu(it) }
         }
 
+        val decorView = (context as? android.app.Activity)?.window?.decorView ?: anchor.rootView
+        if (isOneUi && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            decorView.setRenderEffect(
+                android.graphics.RenderEffect.createBlurEffect(
+                    FOLDER_BLUR_RADIUS, FOLDER_BLUR_RADIUS, android.graphics.Shader.TileMode.CLAMP
+                )
+            )
+        }
+
         val popup = PopupWindow(
             binding.root,
             ViewGroup.LayoutParams.MATCH_PARENT,
@@ -246,6 +267,10 @@ class FolderPopup(private val context: Context) {
             setBackgroundDrawable(ColorDrawable(0))
             elevation = 16f
             isOutsideTouchable = true
+            isClippingEnabled = false
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                setIsClippedToScreen(false)
+            }
             // The expand-from-icon enter animation is driven in-view below.
             // The window style keeps a generic shrink+fade for the dismiss
             // paths that bypass the animated close (back key, launching an
@@ -260,8 +285,13 @@ class FolderPopup(private val context: Context) {
         // The root always fills the window so the card can expand from the
         // icon underneath it; WINDOW mode just keeps the scrim transparent.
         if (isOneUi) {
-            val isDarkTheme = androidx.core.graphics.ColorUtils.calculateLuminance(text) > LUMINANCE_THRESHOLD
-            val scrimColor = if (isDarkTheme) ONEUI_SCRIM_DARK else ONEUI_SCRIM_LIGHT
+            val scrimColor = when (variant) {
+                com.supernova.launcher.ui.theme.ThemeStyleVariant.DARK_AMOLED -> ONEUI_SCRIM_AMOLED
+                com.supernova.launcher.ui.theme.ThemeStyleVariant.DARK_DEFAULT -> ONEUI_SCRIM_DARK
+                com.supernova.launcher.ui.theme.ThemeStyleVariant.LIGHT_FROSTED -> ONEUI_SCRIM_FROSTED_LIGHT
+                com.supernova.launcher.ui.theme.ThemeStyleVariant.LIGHT_DEFAULT -> ONEUI_SCRIM_LIGHT
+                null -> if (isDarkTheme) ONEUI_SCRIM_DARK else ONEUI_SCRIM_LIGHT
+            }
             binding.folderScrim.setBackgroundColor(scrimColor)
             val cardHeight = (metrics.heightPixels * ONEUI_CARD_HEIGHT_RATIO).toInt()
             val cardTop = metrics.heightPixels - context.dp(ONEUI_BOTTOM_MARGIN_DP) - cardHeight
@@ -326,8 +356,15 @@ class FolderPopup(private val context: Context) {
         // pivot/scale captured at open time make close the exact reverse.
         var openScale = 0.3f
         var closing = false
+        fun clearBlur() {
+            if (isOneUi && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                decorView.setRenderEffect(null)
+            }
+        }
+
         fun animateClose() {
             if (closing) return
+            clearBlur()
             if (hideAnchor) {
                 anchor.alpha = 1f
                 anchor.visibility = View.VISIBLE
@@ -380,6 +417,7 @@ class FolderPopup(private val context: Context) {
         }
 
         popup.setOnDismissListener {
+            clearBlur()
             val newName = (if (isOneUi) binding.oneUiTitle.text else binding.folderTitle.text)?.toString().orEmpty()
             if (newName.isNotBlank() && newName != title) onRename(newName)
             if (hideAnchor) {
@@ -450,7 +488,7 @@ class FolderPopup(private val context: Context) {
             startExpand(card)
         }
 
-        popup.showAtLocation(anchor, Gravity.CENTER, 0, 0)
+        popup.showAtLocation(anchor.rootView, Gravity.TOP or Gravity.START, 0, 0)
         return popup
     }
 
@@ -560,13 +598,18 @@ class FolderPopup(private val context: Context) {
         private const val ONEUI_TITLE_TOP_RATIO = 0.15f
         private const val ONEUI_ADD_BTN_SIZE_DP = 44
         private const val ONEUI_ADD_BTN_OFFSET_X_DP = 44
-        private const val ONEUI_ADD_BTN_OFFSET_Y_DP = 52
+        private const val ONEUI_ADD_BTN_OFFSET_Y_DP = 36
         private const val ONEUI_ADD_BTN_MIN_TOP_DP = 16
-        private const val ONEUI_SCRIM_DARK = 0xF4121214.toInt()
-        private const val ONEUI_SCRIM_LIGHT = 0xEEF0F2F5.toInt()
-        private const val ONEUI_FALLBACK_DARK = 0x38FFFFFF.toInt()
-        private const val ONEUI_FALLBACK_LIGHT = 0xCCFFFFFF.toInt()
+        private const val ONEUI_SCRIM_AMOLED = 0x99000000.toInt()
+        private const val ONEUI_SCRIM_DARK = 0x80000000.toInt()
+        private const val ONEUI_SCRIM_LIGHT = 0x66F0F2F5.toInt()
+        private const val ONEUI_SCRIM_FROSTED_LIGHT = 0x60FFFFFF.toInt()
+        private const val ONEUI_CARD_AMOLED = 0xFF0A0A0A.toInt()
+        private const val ONEUI_CARD_DARK = 0xEE252832.toInt()
+        private const val ONEUI_CARD_LIGHT = 0xFFFFFFFF.toInt()
+        private const val ONEUI_CARD_FROSTED_LIGHT = 0xCCFFFFFF.toInt()
         private const val ONEUI_DEFAULT_DRAWER_SURFACE = 0xFF1E2735.toInt()
+        private const val FOLDER_BLUR_RADIUS = 45f
 
         // Member tile width at the base icon size: the 48dp icon plus room
         // for a one-line 12sp label.

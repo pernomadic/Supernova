@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Golden Yellow Crescent Moon -->
+    <path
+        android:fillColor="#FFD54F"
+        android:pathData="M15.5,2.5C13.84,2.5 12.33,3.31 11.41,4.56C12.33,5.92 12.87,7.56 12.87,9.33C12.87,10.23 12.72,11.09 12.44,11.89C13.56,12.28 14.54,13 15.28,13.96C17.42,13.5 19,11.61 19,9.33C19,5.56 15.5,2.5 15.5,2.5Z" />
+    <!-- Night Cloud (Deep Slate / Navy tint) -->
+    <path
+        android:fillColor="#5C6BC0"
+        android:pathData="M17.5,19.5H6C3.51,19.5 1.5,17.49 1.5,15C1.5,12.72 3.19,10.84 5.41,10.55C6.21,7.27 9.15,5 12.5,5C15.89,5 18.72,7.13 19.66,10.21C19.89,10.17 20.12,10.15 20.35,10.15C22.37,10.15 24,11.78 24,13.8C24,16.54 21.24,19.5 17.5,19.5Z" />
+    <path
+        android:fillColor="#9FA8DA"
+        android:pathData="M17.5,18.5H6C4.07,18.5 2.5,16.93 2.5,15C2.5,13.23 3.81,11.76 5.54,11.54C6.16,8.99 8.46,7 12.5,7C15.54,7 18.06,8.7 18.89,11.16C19.09,11.13 19.3,11.12 19.5,11.12C21.43,11.12 23,12.69 23,14.62C23,16.76 20.76,18.5 17.5,18.5Z" />
+</vector>

@@ -50,24 +50,24 @@ object OneUiTheme {
 
     // Folders, search bars and surfaces
     const val FROSTED_WHITE = 0xFFFFFFFF.toInt()
-    const val FROSTED_SURFACE = 0xF2FFFFFF.toInt()
-    const val FROSTED_CARD = 0xE6F8F9FA.toInt()
-    const val FROSTED_BAR = 0xCCFFFFFF.toInt()
-    const val FROSTED_FOLDER_PLATE = 0x80FFFFFF.toInt()
+    const val FROSTED_SURFACE = 0xD9FFFFFF.toInt()
+    const val FROSTED_CARD = 0xF0FFFFFF.toInt()
+    const val FROSTED_BAR = 0xB3FFFFFF.toInt()
+    const val FROSTED_FOLDER_PLATE = 0xB3FFFFFF.toInt()
 
     private const val DARK_DEFAULT_SURFACE = 0xFF1E2735.toInt()
     private const val DARK_DEFAULT_CARD = 0xFF1A2230.toInt()
     private const val DARK_DEFAULT_SETTINGS = 0xFF0D1117.toInt()
     private const val DARK_DEFAULT_DRAWER_SEARCH_BAR = 0x24FFFFFF
 
-    private const val LIGHT_FROSTED_SETTINGS = 0xFFF5F7FA.toInt()
-    private const val LIGHT_FROSTED_DOCK = 0xCCFFFFFF.toInt()
+    private const val LIGHT_FROSTED_SETTINGS = 0xFFF0F2F6.toInt()
+    private const val LIGHT_FROSTED_DOCK = 0xB3FFFFFF.toInt()
 
     private const val LIGHT_DEFAULT_SETTINGS = 0xFFF4F5F7.toInt()
 
     private const val PLATE_AMOLED = 0x99000000.toInt()
     private const val PLATE_DARK_DEFAULT = 0x66000000.toInt()
-    private const val PLATE_LIGHT_FROSTED = 0x99FFFFFF.toInt()
+    private const val PLATE_LIGHT_FROSTED = 0xB3FFFFFF.toInt()
     private const val PLATE_LIGHT_DEFAULT = 0x80FFFFFF.toInt()
 
     fun activeVariant(context: Context, prefs: LauncherPrefs): ThemeStyleVariant {

@@ -42,11 +42,13 @@ data class SurfaceStyle(
     val cornerRadii: List<Float>? = null,
     // Minimum contrast: the least tone gap (Contrast) the text keeps
     // from the surface, shading itself to hold it; null = off.
-    val minContrast: Int? = null
+    val minContrast: Int? = null,
+    // Blur effect percentage (0..100); null = default.
+    val blur: Int? = null
 ) {
     fun isEmpty(): Boolean =
         surface.isDefault && text.isDefault && accent.isDefault &&
-            alpha == null && cornerRadii == null && minContrast == null
+            alpha == null && cornerRadii == null && minContrast == null && blur == null
 }
 
 // The whole per-surface style document, persisted as one JSON pref

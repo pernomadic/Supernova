@@ -180,6 +180,7 @@ class FolderIconDrawable(
             if (glass == IconGlass.OFF) {
                 drawPath(local, platePaint)
             } else {
+                painter.isDark = androidx.core.graphics.ColorUtils.calculateLuminance(platePaint.color) < LUMINANCE_MID
                 withClip(local) { painter.drawPane(this, glass, paneColor, size, bounds.height()) }
                 painter.drawEdge(this, local, glass, size, bounds.height())
             }
@@ -352,7 +353,13 @@ class FolderIconDrawable(
             picked: String,
             windowSurface: Int,
             defaultColor: Int = DEFAULT_PLATE_COLOR
-        ): Int = if (match) windowSurface else LabelStyler.parseColor(picked, defaultColor)
+        ): Int = if (picked.isNotEmpty()) {
+            LabelStyler.parseColor(picked, defaultColor)
+        } else if (match && (windowSurface ushr SHIFT_ALPHA) < OPAQUE_ALPHA_VALUE) {
+            windowSurface
+        } else {
+            defaultColor
+        }
 
         // What a folder's own icon is drawn from, for the page and dock
         // signatures: a custom icon, or Reshape turned off for one, changes
@@ -375,6 +382,9 @@ class FolderIconDrawable(
         private const val BASE_SIZE = 48f
         private const val SHADOW_BLUR = 2f
         private const val SHADOW_DROP = 1f
+        private const val LUMINANCE_MID = 0.5
+        private const val SHIFT_ALPHA = 24
+        private const val OPAQUE_ALPHA_VALUE = 255
         private val CLEAR = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
         // Stateless apart from its grain tile, which every plate can share.
         private val painter = GlassPainter()

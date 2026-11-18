@@ -148,10 +148,10 @@ class FeedController(
                     .setDuration(duration)
                     .setInterpolator(DecelerateInterpolator())
                     .start()
-                animateHomeFade(1f, duration, DecelerateInterpolator())
+                animateHomeShift(1f, duration, DecelerateInterpolator())
             } else {
                 pane.translationX = 0f
-                applyHomeFade(1f)
+                applyHomeShift(1f)
             }
         }
     }
@@ -183,18 +183,18 @@ class FeedController(
                     if (!isOpen && !dragging) pane.visibility = View.GONE
                 }
                 .start()
-            animateHomeFade(0f, duration, null)
+            animateHomeShift(0f, duration, null)
         } else {
             pane.translationX = -width
             pane.visibility = View.GONE
-            applyHomeFade(0f)
+            applyHomeShift(0f)
         }
     }
 
-    // ---- Desktop fade -----------------------------------------------------
+    // ---- Desktop shift -----------------------------------------------------
     //
-    // The feed page shows dimmed wallpaper, never the home screen. The
-    // pane's background is only a dim, so the desktop underneath fades out
+    // The feed page moves side-by-side with the home screen like an adjacent
+    // pager page, with no dark dim overlay. The desktop translates horizontally
     // in step with how far the pane is in (0 = parked, 1 = open).
 
     private val homeViews: List<View> by lazy {
@@ -205,25 +205,34 @@ class FeedController(
     }
     private var homeAnimator: android.animation.ValueAnimator? = null
 
-    private fun applyHomeFade(shown: Float) {
+    private fun applyHomeShift(shown: Float) {
         homeAnimator?.cancel()
-        val alpha = 1f - shown.coerceIn(0f, 1f)
-        for (view in homeViews) view.alpha = alpha
+        val width = paneWidth().toFloat()
+        val offset = shown.coerceIn(0f, 1f) * width
+        for (view in homeViews) {
+            view.translationX = offset
+            view.alpha = 1f
+        }
     }
 
-    private fun animateHomeFade(shown: Float, duration: Long, interpolator: android.view.animation.Interpolator?) {
+    private fun animateHomeShift(shown: Float, duration: Long, interpolator: android.view.animation.Interpolator?) {
         homeAnimator?.cancel()
         if (duration == 0L) {
-            applyHomeFade(shown)
+            applyHomeShift(shown)
             return
         }
-        val from = 1f - binding.workspacePager.alpha
-        homeAnimator = android.animation.ValueAnimator.ofFloat(from, shown).apply {
+        val width = paneWidth().toFloat()
+        val fromOffset = binding.workspacePager.translationX
+        val targetOffset = shown.coerceIn(0f, 1f) * width
+        homeAnimator = android.animation.ValueAnimator.ofFloat(fromOffset, targetOffset).apply {
             this.duration = duration
             if (interpolator != null) this.interpolator = interpolator
             addUpdateListener { animator ->
-                val alpha = 1f - (animator.animatedValue as Float)
-                for (view in homeViews) view.alpha = alpha
+                val offset = animator.animatedValue as Float
+                for (view in homeViews) {
+                    view.translationX = offset
+                    view.alpha = 1f
+                }
             }
             start()
         }
@@ -348,7 +357,7 @@ class FeedController(
         val pane = ui?.root ?: return
         val width = paneWidth().toFloat()
         pane.translationX = (dragOrigin + (x - downX)).coerceIn(-width, 0f)
-        applyHomeFade((width + pane.translationX) / width)
+        applyHomeShift((width + pane.translationX) / width)
     }
 
     private fun settle(cancelled: Boolean) {
@@ -387,10 +396,10 @@ class FeedController(
                     .setDuration(duration)
                     .setInterpolator(settle)
                     .start()
-                animateHomeFade(1f, duration, settle)
+                animateHomeShift(1f, duration, settle)
             } else {
                 pane.translationX = 0f
-                applyHomeFade(1f)
+                applyHomeShift(1f)
             }
         } else {
             isOpen = false
@@ -402,11 +411,11 @@ class FeedController(
                     .setInterpolator(settle)
                     .withEndAction { if (!isOpen && !dragging) pane.visibility = View.GONE }
                     .start()
-                animateHomeFade(0f, duration, settle)
+                animateHomeShift(0f, duration, settle)
             } else {
                 pane.translationX = -width
                 pane.visibility = View.GONE
-                applyHomeFade(0f)
+                applyHomeShift(0f)
             }
         }
     }
@@ -642,8 +651,8 @@ class FeedController(
         // text takes the DRAWER surface's text color, the embedded bar wears
         // SEARCH_BAR and the cards the CARDS surface (POPUP's colours until
         // styled), keeping every color user-styleable through the pickers.
-        val paneText = paneTextColor(prefs)
-        pane.root.setBackgroundColor(FEED_DIM)
+        val paneText = Styles.resolve(context, prefs).of(SurfaceId.DRAWER).text
+        pane.root.setBackgroundColor(android.graphics.Color.TRANSPARENT)
         val cards = resolved.of(SurfaceId.CARDS)
         adapter.setAppearance(cards.surface, cards.text, cards.accent, paneText)
         // The feed bar borrows the desktop bar's styling (radius, wireframe,
@@ -655,15 +664,6 @@ class FeedController(
             resolved.of(SurfaceId.SEARCH_BAR),
             prefs.searchBarColoredIcons
         )
-    }
-
-    // Text drawn straight on the pane (the footer, the empty page) sits on
-    // FEED_DIM, which is always dark: a light drawer theme's
-    // dark text vanished there, so a dark drawer text falls back to white.
-    private fun paneTextColor(prefs: LauncherPrefs): Int {
-        val text = Styles.resolve(context, prefs).of(SurfaceId.DRAWER).text
-        val dark = androidx.core.graphics.ColorUtils.calculateLuminance(text) < DARK_TEXT_LUMINANCE
-        return if (dark) android.graphics.Color.WHITE else text
     }
 
     // Wallpaper-palette invalidation arrives without a prefs emission.
@@ -684,9 +684,5 @@ class FeedController(
         const val EDGE_GUTTER_DP = 24
         const val OPEN_MS = 220L
         const val CLOSE_MS = 180L
-        // The feed page dims the wallpaper by about half.
-        const val FEED_DIM = 0x80000000.toInt()
-        // Pane text darker than this can't be read on FEED_DIM.
-        const val DARK_TEXT_LUMINANCE = 0.5
     }
 }

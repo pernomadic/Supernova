@@ -728,6 +728,8 @@
     <string name="style_role_neutral">Neutral</string>
     <string name="style_role_neutral_variant">Neutral variant</string>
     <string name="style_opacity">Opacity</string>
+    <string name="style_blur">Blur effect</string>
+    <string name="blur_percent">%1$d%%</string>
     <string name="labs">Labs</string>
     <string name="group_home_button">Home button</string>
     <string name="section_labs_subtitle">Experiments and icon theme tools</string>
@@ -882,6 +884,7 @@
     <string name="anim_zoom">Zoom</string>
     <string name="anim_blink">Blink</string>
     <string name="anim_slide_left">Slide left</string>
+    <string name="anim_oneui">One UI</string>
     <string name="disable_animations">Disable animations</string>
     <string name="animation_speed">Animation speed</string>
     <string name="anim_speed_relaxed">Relaxed</string>

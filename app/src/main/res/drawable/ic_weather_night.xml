@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Crescent Moon behind cloud -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M15.5,2.5C13.84,2.5 12.33,3.31 11.41,4.56C12.33,5.92 12.87,7.56 12.87,9.33C12.87,10.23 12.72,11.09 12.44,11.89C13.56,12.28 14.54,13 15.28,13.96C17.42,13.5 19,11.61 19,9.33C19,5.56 15.5,2.5 15.5,2.5Z" />
+    <!-- OneUI Cloud -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M17.5,19H6C3.79,19 2,17.21 2,15C2,12.98 3.5,11.3 5.47,11.04C6.18,8.12 8.8,6 12,6C15.02,6 17.53,7.89 18.37,10.63C18.57,10.6 18.78,10.58 19,10.58C21.21,10.58 23,12.37 23,14.58C23,17.02 20.54,19 17.5,19Z" />
+</vector>

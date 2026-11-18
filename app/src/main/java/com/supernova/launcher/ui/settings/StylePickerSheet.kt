@@ -338,6 +338,25 @@ object StylePickerSheet {
             binding.opacityRow.visibility = android.view.View.GONE
         }
 
+        val blurPercent = style.blur ?: 0
+        binding.blurSeek.progress = blurPercent
+        binding.blurValue.text = context.getString(R.string.blur_percent, blurPercent)
+        binding.blurSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
+                binding.blurValue.text = context.getString(R.string.blur_percent, progress)
+                if (fromUser) {
+                    style = style.copy(blur = progress.takeIf { it > 0 })
+                    persist()
+                }
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar) = Unit
+            override fun onStopTrackingTouch(seekBar: SeekBar) {
+                style = style.copy(blur = seekBar.progress.takeIf { it > 0 })
+                persist()
+            }
+        })
+
         if (surfaceId == SurfaceId.HOME) {
             // A background behind the icons: a color and how much of the
             // wallpaper it hides, and nothing that needs text.

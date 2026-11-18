@@ -951,19 +951,23 @@ class LauncherActivity :
     // closed, so unlocking lands on the home screen rather than on whatever was
     // open when the screen went dark, as Launcher3 does. User present plays the
     // OneUI-style unlock entrance animation if enabled.
-    private var wasScreenOff = false
+    private var pendingUnlockAnimation = false
+    private var lastUserPresentTime = 0L
+    private var lastLaunchAnchor: java.lang.ref.WeakReference<View>? = null
     private val screenOffReceiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(context: android.content.Context, intent: Intent) {
             when (intent.action) {
                 Intent.ACTION_SCREEN_OFF -> {
-                    wasScreenOff = true
+                    pendingUnlockAnimation = false
                     privateSpaceCard.cancelPending()
                     resetToHome(animate = false, keepDrawer = drawerKeptBehindLaunch)
                 }
                 Intent.ACTION_USER_PRESENT -> {
-                    if (wasScreenOff) {
-                        wasScreenOff = false
+                    lastUserPresentTime = SystemClock.elapsedRealtime()
+                    if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
                         playUnlockEntranceAnimation()
+                    } else {
+                        pendingUnlockAnimation = true
                     }
                 }
             }
@@ -1016,10 +1020,6 @@ class LauncherActivity :
         if (!viewModel.state.value.prefs.dockRememberPosition) showMainDockPage(animate = false)
         widgets.stopListening()
         runCatching { unregisterReceiver(dateChangeReceiver) }
-        val powerManager = getSystemService(android.os.PowerManager::class.java)
-        if (powerManager?.isInteractive == false) {
-            wasScreenOff = true
-        }
         super.onStop()
     }
 
@@ -1031,13 +1031,29 @@ class LauncherActivity :
         // open is one they came back to, not one parked behind an app.
         drawerKeptBehindLaunch = false
         reopenDockIfAutoClosed()
-        if (wasScreenOff) {
-            wasScreenOff = false
+        val justUnlocked = pendingUnlockAnimation ||
+            (lastUserPresentTime > 0L && SystemClock.elapsedRealtime() - lastUserPresentTime < UNLOCK_WINDOW_MS)
+        pendingUnlockAnimation = false
+        if (justUnlocked) {
+            lastUserPresentTime = 0L
             binding.root.post { playUnlockEntranceAnimation() }
+        } else {
+            lastLaunchAnchor?.get()?.let { view ->
+                lastLaunchAnchor = null
+                view.scaleX = ONEUI_MINIMIZE_SCALE
+                view.scaleY = ONEUI_MINIMIZE_SCALE
+                view.alpha = ONEUI_MINIMIZE_ALPHA
+                view.animate()
+                    .scaleX(1f).scaleY(1f).alpha(1f)
+                    .setDuration(ONEUI_MINIMIZE_DURATION_MS)
+                    .setInterpolator(PathInterpolator(ONEUI_INTERPOLATOR_X1, ONEUI_INTERPOLATOR_Y1, 0f, 1f))
+                    .start()
+            }
         }
     }
 
     override fun onPause() {
+        pendingUnlockAnimation = false
         // Home pressed while a circle was still filling, say: that launch is
         // off. One already asked for carries on.
         launchPrelude.cancelPending()
@@ -1866,8 +1882,14 @@ class LauncherActivity :
                         // restores their icons in the results.
                         search.refresh()
                     }
-                    workspaceAdapter.refresh()
-                    workspaceAdapter.recenterIfNeeded(binding.workspacePager)
+                    val workspaceChanged = last == null ||
+                        last.model !== state.model ||
+                        last.iconGeneration != state.iconGeneration ||
+                        last.prefs != state.prefs
+                    if (workspaceChanged) {
+                        workspaceAdapter.refresh()
+                        workspaceAdapter.recenterIfNeeded(binding.workspacePager)
+                    }
                     drag.carryOverToNewPage()
                     pendingPageAfterRemoval?.let { pending ->
                         pendingPageAfterRemoval = null
@@ -2876,6 +2898,13 @@ class LauncherActivity :
             return
         }
         val style = prefs.launchAnimation
+        if (style == LaunchAnimation.ONEUI) {
+            lastLaunchAnchor = java.lang.ref.WeakReference(anchor)
+            anchor.animate().scaleX(ONEUI_LAUNCH_PRESS_SCALE).scaleY(ONEUI_LAUNCH_PRESS_SCALE)
+                .setDuration(ONEUI_LAUNCH_PRESS_DURATION_MS).start()
+            launch(bounds, launchOptions(style, anchor))
+            return
+        }
         val snapshot = if (style == LaunchAnimation.CIRCLE || style == LaunchAnimation.ADAPTIVE_ICON) {
             runLogged("draw launch icon") { anchor.drawToBitmap() }.getOrNull()
         } else {
@@ -2916,7 +2945,7 @@ class LauncherActivity :
     private fun launchOptions(style: LaunchAnimation, anchor: View): android.os.Bundle = when (style) {
         LaunchAnimation.SYSTEM, LaunchAnimation.REVEAL -> android.app.ActivityOptions
             .makeClipRevealAnimation(anchor, 0, 0, anchor.width, anchor.height)
-        LaunchAnimation.ADAPTIVE_ICON, LaunchAnimation.ZOOM -> android.app.ActivityOptions
+        LaunchAnimation.ONEUI, LaunchAnimation.ADAPTIVE_ICON, LaunchAnimation.ZOOM -> android.app.ActivityOptions
             .makeScaleUpAnimation(anchor, 0, 0, anchor.width, anchor.height)
         LaunchAnimation.CIRCLE -> android.app.ActivityOptions
             .makeCustomAnimation(this, R.anim.launch_fade_enter, R.anim.launch_fade_exit)
@@ -4132,6 +4161,7 @@ class LauncherActivity :
             shadow = prefs.folderShadow,
             animate = Animations.enabled(prefs),
             speed = Animations.factor(prefs),
+            variant = com.supernova.launcher.ui.theme.OneUiTheme.activeVariant(this, prefs),
             onRename = { viewModel.renameFolder(folder.id, it) },
             // The title row's overflow: Select apps and Sort, as the folder's
             // long-press has them. Opened by a tap, so modal at once, and the
@@ -4354,6 +4384,7 @@ class LauncherActivity :
             shadow = prefs.folderShadow,
             animate = Animations.enabled(prefs),
             speed = Animations.factor(prefs),
+            variant = com.supernova.launcher.ui.theme.OneUiTheme.activeVariant(this, prefs),
             onRename = { newName -> groupName = viewModel.renameGroup(group, newName) },
             onMenu = {
                 // The group editor rewrites the members pref; the drawer
@@ -5117,5 +5148,13 @@ class LauncherActivity :
         private const val UNLOCK_SCALE = 0.94f
         private const val UNLOCK_PATH_X1 = 0.22f
         private const val UNLOCK_PATH_Y1 = 0.25f
+        private const val UNLOCK_WINDOW_MS = 600L
+        private const val ONEUI_MINIMIZE_SCALE = 1.15f
+        private const val ONEUI_MINIMIZE_ALPHA = 0.7f
+        private const val ONEUI_MINIMIZE_DURATION_MS = 240L
+        private const val ONEUI_INTERPOLATOR_X1 = 0.22f
+        private const val ONEUI_INTERPOLATOR_Y1 = 0.25f
+        private const val ONEUI_LAUNCH_PRESS_SCALE = 0.92f
+        private const val ONEUI_LAUNCH_PRESS_DURATION_MS = 120L
     }
 }
