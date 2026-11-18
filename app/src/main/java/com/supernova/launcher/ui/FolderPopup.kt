@@ -669,10 +669,10 @@ class FolderPopup(private val context: Context) {
         private const val ONEUI_SCRIM_DARK = 0x401A1D2B.toInt()
         private const val ONEUI_SCRIM_LIGHT = 0x40E8E8ED.toInt()
         private const val ONEUI_SCRIM_FROSTED_LIGHT = 0x40FFFFFF.toInt()
-        private const val ONEUI_CARD_AMOLED = 0x4D050505.toInt()
-        private const val ONEUI_CARD_DARK = 0x4D20242B.toInt()
-        private const val ONEUI_CARD_LIGHT = 0x59FFFFFF.toInt()
-        private const val ONEUI_CARD_FROSTED_LIGHT = 0x4DFFFFFF.toInt()
+        private const val ONEUI_CARD_AMOLED = 0x38050505.toInt()
+        private const val ONEUI_CARD_DARK = 0x3820242B.toInt()
+        private const val ONEUI_CARD_LIGHT = 0x40FFFFFF.toInt()
+        private const val ONEUI_CARD_FROSTED_LIGHT = 0x38FFFFFF.toInt()
         private const val ONEUI_DEFAULT_DRAWER_SURFACE = 0xFF1E2735.toInt()
         const val FOLDER_BLUR_RADIUS = 250f
         private const val ONEUI_INITIAL_SCALE = 0.82f

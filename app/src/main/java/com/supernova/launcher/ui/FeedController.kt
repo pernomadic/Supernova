@@ -714,10 +714,11 @@ class FeedController(
         val config = com.supernova.launcher.ui.theme.StyleConfig.decode(viewModel.state.value.prefs.styleConfig)
         return config.styleFor(
             com.supernova.launcher.ui.theme.SurfaceId.CARDS, variant
-        ).blur?.toFloat() ?: FEED_MAX_BLUR_RADIUS
+        ).blur?.let { (it * FEED_MAX_BLUR_RADIUS / FULL_PERCENT) } ?: FEED_MAX_BLUR_RADIUS
     }
 
     private companion object {
+        const val FULL_PERCENT = 100f
         // Horizontal must beat vertical by this much before a drag is ours.
         const val DIRECTION_BIAS = 2f
         const val EDGE_GUTTER_DP = 24

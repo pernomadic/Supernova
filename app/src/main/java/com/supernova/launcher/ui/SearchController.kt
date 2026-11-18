@@ -233,12 +233,14 @@ class SearchController(
             val config = com.supernova.launcher.ui.theme.StyleConfig.decode(viewModel.state.value.prefs.styleConfig)
             val searchBlur = config.styleFor(
                 com.supernova.launcher.ui.theme.SurfaceId.SEARCH_BAR, variant
-            ).blur?.toFloat() ?: SEARCH_BLUR_RADIUS
-            binding.workspacePager.setRenderEffect(
-                android.graphics.RenderEffect.createBlurEffect(
-                    searchBlur, searchBlur, android.graphics.Shader.TileMode.CLAMP
-                )
+            ).blur?.let { (it * SEARCH_BLUR_RADIUS / FULL_PERCENT) } ?: SEARCH_BLUR_RADIUS
+            val effect = android.graphics.RenderEffect.createBlurEffect(
+                searchBlur, searchBlur, android.graphics.Shader.TileMode.CLAMP
             )
+            binding.workspacePager.setRenderEffect(effect)
+            binding.dockBar.setRenderEffect(effect)
+            binding.desktopSearchBar.setRenderEffect(effect)
+            binding.desktopSearchWidget.setRenderEffect(effect)
         }
         showZeroState()
         loadRecentQueries()
@@ -274,6 +276,9 @@ class SearchController(
         isOpen = false
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
             binding.workspacePager.setRenderEffect(null)
+            binding.dockBar.setRenderEffect(null)
+            binding.desktopSearchBar.setRenderEffect(null)
+            binding.desktopSearchWidget.setRenderEffect(null)
         }
         onHidden()
         val ui = overlay ?: return
@@ -777,6 +782,7 @@ class SearchController(
 
 
     private companion object {
+        const val FULL_PERCENT = 100f
         const val SEARCH_BLUR_RADIUS = 250f
         const val IMMERSIVE_TINT_AMOLED = 0x40000000.toInt()
         const val IMMERSIVE_TINT_DARK = 0x401A1D2B.toInt()

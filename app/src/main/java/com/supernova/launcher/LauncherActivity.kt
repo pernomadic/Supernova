@@ -4198,9 +4198,7 @@ class LauncherActivity :
         val prefs = viewModel.state.value.prefs
         val folderVariant = com.supernova.launcher.ui.theme.OneUiTheme.activeVariant(this, prefs)
         val folderStyleConfig = com.supernova.launcher.ui.theme.StyleConfig.decode(prefs.styleConfig)
-        folderPopup.blurIntensity = folderStyleConfig.styleFor(
-            com.supernova.launcher.ui.theme.SurfaceId.FOLDER, folderVariant
-        ).blur?.toFloat() ?: FolderPopup.FOLDER_BLUR_RADIUS
+        folderPopup.blurIntensity = resolveFolderBlur(folderStyleConfig, folderVariant)
         popup = folderPopup.show(
             anchor = anchor,
             title = folder.label,
@@ -4367,6 +4365,15 @@ class LauncherActivity :
     }
 
     // Drawer folders (FOLDER-type groups): the same popup chrome fed from
+    private fun resolveFolderBlur(
+        config: com.supernova.launcher.ui.theme.StyleConfig,
+        variant: com.supernova.launcher.ui.theme.ThemeStyleVariant?
+    ): Float {
+        val percent = config.styleFor(com.supernova.launcher.ui.theme.SurfaceId.FOLDER, variant).blur
+            ?: return FolderPopup.FOLDER_BLUR_RADIUS
+        return percent * FolderPopup.FOLDER_BLUR_RADIUS / FULL_PERCENT
+    }
+
     // LaunchableApps via transient items - nothing here touches the model.
     private fun showDrawerFolderPopup(anchor: View, group: DrawerGroup, members: List<LaunchableApp>) {
         val prefs = viewModel.state.value.prefs
@@ -4426,9 +4433,7 @@ class LauncherActivity :
         }
         val drawerFolderVariant = com.supernova.launcher.ui.theme.OneUiTheme.activeVariant(this, prefs)
         val drawerFolderStyleConfig = com.supernova.launcher.ui.theme.StyleConfig.decode(prefs.styleConfig)
-        folderPopup.blurIntensity = drawerFolderStyleConfig.styleFor(
-            com.supernova.launcher.ui.theme.SurfaceId.FOLDER, drawerFolderVariant
-        ).blur?.toFloat() ?: FolderPopup.FOLDER_BLUR_RADIUS
+        folderPopup.blurIntensity = resolveFolderBlur(drawerFolderStyleConfig, drawerFolderVariant)
         popup = folderPopup.show(
             anchor = anchor,
             title = group.name,
@@ -5183,6 +5188,7 @@ class LauncherActivity :
         // How long a folder member action waits for its change to be saved.
         private const val FOLDER_SAVE_WAIT_MS = 1_000L
         private const val PAGE_REBIND_WAIT_MS = 100L
+        private const val FULL_PERCENT = 100f
 
         // Undo snackbar lifetime after a removal.
         private const val UNDO_DURATION_MS = 4000
