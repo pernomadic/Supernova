@@ -17,3 +17,4 @@ dependencyResolutionManagement {
 rootProject.name = "Supernova"
 include(":app")
 include(":baselineprofile")
+include(":feedwidget")

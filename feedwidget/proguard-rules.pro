@@ -1,0 +1,1 @@
+# Feed Widget proguard rules

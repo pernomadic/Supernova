@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="launcherIconBackground">#18191B</color>
+    <color name="accent">#5C6BC0</color>
+    
+    <!-- OneUI Theme Colors -->
+    <color name="oneui_amoled_bg">#40000000</color>
+    <color name="oneui_dark_bg">#401A1D2B</color>
+    <color name="oneui_light_bg">#40E8E8ED</color>
+    <color name="oneui_frosted_light_bg">#40FFFFFF</color>
+
+    <color name="oneui_plate_amoled">#38050505</color>
+    <color name="oneui_plate_dark">#3820242B</color>
+    <color name="oneui_plate_light">#40FFFFFF</color>
+    <color name="oneui_plate_frosted">#38FFFFFF</color>
+
+    <color name="text_dark_primary">#FFFFFF</color>
+    <color name="text_dark_secondary">#B3FFFFFF</color>
+    <color name="text_light_primary">#1C1C1E</color>
+    <color name="text_light_secondary">#8E8E93</color>
+</resources>

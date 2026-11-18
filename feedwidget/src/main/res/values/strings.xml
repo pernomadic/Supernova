@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Aryonova Feed</string>
+    <string name="widget_name">Aryonova Feed</string>
+    <string name="widget_settings">Feed Widget Settings</string>
+    <string name="widget_search_hint">Search apps, web…</string>
+    <string name="theme_title">Theme Style</string>
+    <string name="theme_amoled">AMOLED Dark</string>
+    <string name="theme_dark">Dark Default (OneUI)</string>
+    <string name="theme_light">Light Default</string>
+    <string name="theme_frosted">Frosted Light</string>
+    <string name="save_widget">Apply Settings</string>
+    <string name="feed_quick_apps">Quick Apps</string>
+    <string name="feed_calendar">Calendar</string>
+    <string name="feed_weather">Weather</string>
+    <string name="feed_tasks">Tasks</string>
+</resources>
