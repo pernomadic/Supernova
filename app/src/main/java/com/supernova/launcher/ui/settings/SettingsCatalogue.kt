@@ -1119,28 +1119,8 @@ object SettingsCatalogue {
                     get = { it.searchPrivateKeyboard },
                     set = { viewModel.set(Pref.searchPrivateKeyboard, it) },
                     subtitle = R.string.search_private_keyboard_summary
-                ),
-                SettingItem.Header(R.string.desktop_search_bar),
-                rows.choice(
-                    R.string.search_bar_click_action,
-                    com.supernova.launcher.ui.SearchBarTapAction.entries,
-                    { it.searchBarTapAction },
-                    { action ->
-                        when (action) {
-                            com.supernova.launcher.ui.SearchBarTapAction.DEFAULT -> R.string.search_bar_action_default
-                            com.supernova.launcher.ui.SearchBarTapAction.CHROME -> R.string.search_bar_action_chrome
-                            com.supernova.launcher.ui.SearchBarTapAction.FINDER -> R.string.search_bar_action_finder
-                        }
-                    }
-                ) { action -> viewModel.set(Pref.searchBarTapAction, action) },
-                SettingItem.Toggle(
-                    R.string.search_bar_colored_icons,
-                    get = { it.searchBarColoredIcons },
-                    set = { on -> viewModel.set(Pref.searchBarColoredIcons, on) },
-                    subtitle = R.string.search_bar_colored_icons_summary
-                ),
-                SettingItem.Header(R.string.search_bar_chips)
-            ) + SearchBarButtons.ROWS.map(rows::barChip)
+                )
+            )
         ),
         // The Drawer groups page, opened from the App drawer page's row;
         // back returns there. It has no rows of its own: SettingsActivity
@@ -1161,7 +1141,6 @@ object SettingsCatalogue {
                         when (action) {
                             com.supernova.launcher.ui.SearchBarTapAction.DEFAULT -> R.string.search_bar_action_default
                             com.supernova.launcher.ui.SearchBarTapAction.CHROME -> R.string.search_bar_action_chrome
-                            com.supernova.launcher.ui.SearchBarTapAction.FINDER -> R.string.search_bar_action_finder
                         }
                     }
                 ) { action -> viewModel.set(Pref.searchBarTapAction, action) },

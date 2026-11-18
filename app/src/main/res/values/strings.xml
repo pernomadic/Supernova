@@ -1150,7 +1150,6 @@
     <string name="search_bar_click_action">Search bar tap action</string>
     <string name="search_bar_action_default">Aryonova search</string>
     <string name="search_bar_action_chrome">Google Chrome search</string>
-    <string name="search_bar_action_finder">Samsung Finder</string>
     <string name="search_bar_chip_chrome">Google Chrome</string>
     <string name="search_bar_chip_weather">Weather</string>
     <string name="search_bar_colored_icons">Colored brand icons</string>

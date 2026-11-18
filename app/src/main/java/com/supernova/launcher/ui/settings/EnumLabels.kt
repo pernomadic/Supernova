@@ -407,7 +407,6 @@ object EnumLabels {
     fun of(action: com.supernova.launcher.ui.SearchBarTapAction): Int = when (action) {
         com.supernova.launcher.ui.SearchBarTapAction.DEFAULT -> R.string.search_bar_action_default
         com.supernova.launcher.ui.SearchBarTapAction.CHROME -> R.string.search_bar_action_chrome
-        com.supernova.launcher.ui.SearchBarTapAction.FINDER -> R.string.search_bar_action_finder
     }
 
     @StringRes

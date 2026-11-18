@@ -135,13 +135,16 @@ class FolderPopup(private val context: Context) {
         binding.folderEditButton.imageTintList = android.content.res.ColorStateList.valueOf(text)
         binding.folderTitle.visibility = if (showTitle && !isOneUi) View.VISIBLE else View.GONE
         if (isOneUi) {
+            val headerColor = if (isDarkTheme) android.graphics.Color.WHITE else 0xFF11161D.toInt()
             binding.folderBottomBar.visibility = View.GONE
             binding.oneUiTitle.visibility = if (showTitle) View.VISIBLE else View.GONE
-            binding.oneUiTitle.setTextColor(text)
-            binding.oneUiTitle.setHintTextColor(androidx.core.graphics.ColorUtils.setAlphaComponent(text, HINT_ALPHA))
+            binding.oneUiTitle.setTextColor(headerColor)
+            binding.oneUiTitle.setHintTextColor(
+                androidx.core.graphics.ColorUtils.setAlphaComponent(headerColor, HINT_ALPHA)
+            )
             if (onMenu != null) {
                 binding.oneUiAddButton.visibility = View.VISIBLE
-                binding.oneUiAddButton.imageTintList = android.content.res.ColorStateList.valueOf(text)
+                binding.oneUiAddButton.imageTintList = android.content.res.ColorStateList.valueOf(headerColor)
                 binding.oneUiAddButton.setOnClickListener { onMenu(it) }
             }
         }
@@ -364,27 +367,60 @@ class FolderPopup(private val context: Context) {
 
         fun animateClose() {
             if (closing) return
-            clearBlur()
             if (hideAnchor) {
                 anchor.alpha = 1f
                 anchor.visibility = View.VISIBLE
             }
             if (!animate) {
+                clearBlur()
                 popup.dismiss()
-                return
+            } else {
+                closing = true
+                if (isOneUi) {
+                    val headerOffset = -context.dp(ONEUI_HEADER_TRANSLATION_DP).toFloat()
+                    binding.oneUiTitle.animate().alpha(0f).translationY(headerOffset)
+                        .setDuration((CLOSE_MS * speed).toLong()).start()
+                    binding.oneUiAddButton.animate().alpha(0f)
+                        .scaleX(ONEUI_BTN_INITIAL_SCALE).scaleY(ONEUI_BTN_INITIAL_SCALE)
+                        .setDuration((CLOSE_MS * speed).toLong()).start()
+                    binding.folderScrim.animate().alpha(0f)
+                        .setDuration((CLOSE_MS * speed).toLong()).start()
+                    binding.folderCard.animate()
+                        .scaleX(ONEUI_INITIAL_SCALE).scaleY(ONEUI_INITIAL_SCALE).alpha(0f)
+                        .setDuration((CLOSE_MS * speed).toLong())
+                        .setInterpolator(COLLAPSE)
+                        .withEndAction {
+                            clearBlur()
+                            popup.dismiss()
+                        }
+                        .start()
+                } else {
+                    binding.root.animate().alpha(0f).setDuration((CLOSE_MS * speed).toLong()).start()
+                    binding.folderCard.animate()
+                        .scaleX(openScale).scaleY(openScale)
+                        // Down from above the keyboard too, if the title had it up.
+                        .translationY(restingY)
+                        .setDuration((CLOSE_MS * speed).toLong())
+                        .setInterpolator(COLLAPSE)
+                        .withEndAction {
+                            clearBlur()
+                            popup.dismiss()
+                        }
+                        .start()
+                }
             }
-            closing = true
-            binding.root.animate().alpha(0f).setDuration((CLOSE_MS * speed).toLong()).start()
-            binding.folderCard.animate()
-                .scaleX(openScale).scaleY(openScale)
-                // Down from above the keyboard too, if the title had it up.
-                .translationY(restingY)
-                .setDuration((CLOSE_MS * speed).toLong())
-                .setInterpolator(COLLAPSE)
-                .withEndAction { popup.dismiss() }
-                .start()
         }
         binding.folderScrim.setOnClickListener { animateClose() }
+        binding.root.isFocusableInTouchMode = true
+        binding.root.requestFocus()
+        binding.root.setOnKeyListener { _, keyCode, event ->
+            if (keyCode == android.view.KeyEvent.KEYCODE_BACK && event.action == android.view.KeyEvent.ACTION_UP) {
+                animateClose()
+                true
+            } else {
+                false
+            }
+        }
 
         // Renaming in the title brings up the keyboard, which covered a card
         // opened low on the screen, title and all. While it is up the card
@@ -440,6 +476,32 @@ class FolderPopup(private val context: Context) {
             if (hideAnchor) anchor.alpha = 0f
             binding.root.animate().alpha(1f).setDuration((SCRIM_MS * speed).toLong()).start()
             if (!animate) return
+            if (isOneUi) {
+                card.scaleX = ONEUI_INITIAL_SCALE
+                card.scaleY = ONEUI_INITIAL_SCALE
+                card.alpha = 0f
+                card.animate()
+                    .scaleX(1f).scaleY(1f).alpha(1f)
+                    .setDuration((OPEN_MS * speed).toLong())
+                    .setInterpolator(EXPAND)
+                    .start()
+                binding.oneUiTitle.translationY = -context.dp(ONEUI_HEADER_TRANSLATION_DP).toFloat()
+                binding.oneUiTitle.alpha = 0f
+                binding.oneUiTitle.animate()
+                    .translationY(0f).alpha(1f)
+                    .setDuration((OPEN_MS * speed).toLong())
+                    .setInterpolator(EXPAND)
+                    .start()
+                binding.oneUiAddButton.scaleX = ONEUI_BTN_INITIAL_SCALE
+                binding.oneUiAddButton.scaleY = ONEUI_BTN_INITIAL_SCALE
+                binding.oneUiAddButton.alpha = 0f
+                binding.oneUiAddButton.animate()
+                    .scaleX(1f).scaleY(1f).alpha(1f)
+                    .setDuration((OPEN_MS * speed).toLong())
+                    .setInterpolator(EXPAND)
+                    .start()
+                return
+            }
             val anchorAt = IntArray(2).also(anchor::getLocationOnScreen)
             // The card is mid-transform, so derive its untransformed screen
             // position from the (unscaled) root plus layout left/top and the
@@ -596,20 +658,23 @@ class FolderPopup(private val context: Context) {
         private const val ONEUI_ROWS = 4
         private const val LUMINANCE_THRESHOLD = 0.5
         private const val ONEUI_TITLE_TOP_RATIO = 0.15f
-        private const val ONEUI_ADD_BTN_SIZE_DP = 44
-        private const val ONEUI_ADD_BTN_OFFSET_X_DP = 44
-        private const val ONEUI_ADD_BTN_OFFSET_Y_DP = 36
+        private const val ONEUI_ADD_BTN_SIZE_DP = 32
+        private const val ONEUI_ADD_BTN_OFFSET_X_DP = 36
+        private const val ONEUI_ADD_BTN_OFFSET_Y_DP = 42
         private const val ONEUI_ADD_BTN_MIN_TOP_DP = 16
-        private const val ONEUI_SCRIM_AMOLED = 0x99000000.toInt()
-        private const val ONEUI_SCRIM_DARK = 0x80000000.toInt()
-        private const val ONEUI_SCRIM_LIGHT = 0x66F0F2F5.toInt()
-        private const val ONEUI_SCRIM_FROSTED_LIGHT = 0x60FFFFFF.toInt()
-        private const val ONEUI_CARD_AMOLED = 0xFF0A0A0A.toInt()
-        private const val ONEUI_CARD_DARK = 0xEE252832.toInt()
+        private const val ONEUI_SCRIM_AMOLED = 0xB3000000.toInt()
+        private const val ONEUI_SCRIM_DARK = 0x8C000000.toInt()
+        private const val ONEUI_SCRIM_LIGHT = 0x80F2F2F7.toInt()
+        private const val ONEUI_SCRIM_FROSTED_LIGHT = 0x73FFFFFF.toInt()
+        private const val ONEUI_CARD_AMOLED = 0xE6050505.toInt()
+        private const val ONEUI_CARD_DARK = 0xCC2C2C2E.toInt()
         private const val ONEUI_CARD_LIGHT = 0xFFFFFFFF.toInt()
-        private const val ONEUI_CARD_FROSTED_LIGHT = 0xCCFFFFFF.toInt()
+        private const val ONEUI_CARD_FROSTED_LIGHT = 0xD9FFFFFF.toInt()
         private const val ONEUI_DEFAULT_DRAWER_SURFACE = 0xFF1E2735.toInt()
-        private const val FOLDER_BLUR_RADIUS = 45f
+        private const val FOLDER_BLUR_RADIUS = 120f
+        private const val ONEUI_INITIAL_SCALE = 0.82f
+        private const val ONEUI_BTN_INITIAL_SCALE = 0.5f
+        private const val ONEUI_HEADER_TRANSLATION_DP = 16
 
         // Member tile width at the base icon size: the 48dp icon plus room
         // for a one-line 12sp label.

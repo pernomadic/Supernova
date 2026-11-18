@@ -213,6 +213,16 @@ class FeedController(
             view.translationX = offset
             view.alpha = 1f
         }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            if (shown > FEED_BLUR_THRESHOLD) {
+                val blur = FEED_MAX_BLUR_RADIUS * shown.coerceIn(0f, 1f)
+                binding.workspacePager.setRenderEffect(
+                    android.graphics.RenderEffect.createBlurEffect(blur, blur, android.graphics.Shader.TileMode.CLAMP)
+                )
+            } else {
+                binding.workspacePager.setRenderEffect(null)
+            }
+        }
     }
 
     private fun animateHomeShift(shown: Float, duration: Long, interpolator: android.view.animation.Interpolator?) {
@@ -232,6 +242,19 @@ class FeedController(
                 for (view in homeViews) {
                     view.translationX = offset
                     view.alpha = 1f
+                }
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                    val currentShown = offset / width.coerceAtLeast(1f)
+                    if (currentShown > FEED_BLUR_THRESHOLD) {
+                        val blur = FEED_MAX_BLUR_RADIUS * currentShown.coerceIn(0f, 1f)
+                        binding.workspacePager.setRenderEffect(
+                            android.graphics.RenderEffect.createBlurEffect(
+                                blur, blur, android.graphics.Shader.TileMode.CLAMP
+                            )
+                        )
+                    } else {
+                        binding.workspacePager.setRenderEffect(null)
+                    }
                 }
             }
             start()
@@ -588,7 +611,6 @@ class FeedController(
         pane.feedSearchBar.onTap = {
             when (viewModel.state.value.prefs.searchBarTapAction) {
                 SearchBarTapAction.CHROME -> SearchBarButtons.openChromeSearch(context)
-                SearchBarTapAction.FINDER -> openSamsungFinder(context)
                 SearchBarTapAction.DEFAULT -> host.onOpenSearch()
             }
         }
@@ -652,7 +674,14 @@ class FeedController(
         // SEARCH_BAR and the cards the CARDS surface (POPUP's colours until
         // styled), keeping every color user-styleable through the pickers.
         val paneText = Styles.resolve(context, prefs).of(SurfaceId.DRAWER).text
-        pane.root.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+        val variant = com.supernova.launcher.ui.theme.OneUiTheme.activeVariant(context, prefs)
+        val bgTint = when (variant) {
+            com.supernova.launcher.ui.theme.ThemeStyleVariant.DARK_AMOLED -> 0xCC000000.toInt()
+            com.supernova.launcher.ui.theme.ThemeStyleVariant.DARK_DEFAULT -> 0x8C000000.toInt()
+            com.supernova.launcher.ui.theme.ThemeStyleVariant.LIGHT_FROSTED -> 0x73FFFFFF.toInt()
+            com.supernova.launcher.ui.theme.ThemeStyleVariant.LIGHT_DEFAULT -> 0x80F2F2F7.toInt()
+        }
+        pane.root.setBackgroundColor(bgTint)
         val cards = resolved.of(SurfaceId.CARDS)
         adapter.setAppearance(cards.surface, cards.text, cards.accent, paneText)
         // The feed bar borrows the desktop bar's styling (radius, wireframe,
@@ -684,5 +713,7 @@ class FeedController(
         const val EDGE_GUTTER_DP = 24
         const val OPEN_MS = 220L
         const val CLOSE_MS = 180L
+        const val FEED_BLUR_THRESHOLD = 0.01f
+        const val FEED_MAX_BLUR_RADIUS = 120f
     }
 }

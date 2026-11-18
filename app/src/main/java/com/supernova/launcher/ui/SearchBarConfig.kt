@@ -9,8 +9,7 @@ import kotlinx.serialization.json.Json
 @Serializable(with = SearchBarTapAction.Names::class)
 enum class SearchBarTapAction {
     DEFAULT,
-    CHROME,
-    FINDER;
+    CHROME;
 
     object Names : SettingEnumSerializer<SearchBarTapAction>("SearchBarTapAction", entries, DEFAULT)
 

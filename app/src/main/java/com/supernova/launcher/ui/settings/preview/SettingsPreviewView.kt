@@ -64,6 +64,8 @@ class SettingsPreviewView @JvmOverloads constructor(
     private var folderCard: View? = null
     private var folderCardBg: android.graphics.drawable.Drawable? = null
     private var folderTitleView: TextView? = null
+    private var folderIconImageView: ImageView? = null
+    private var cachedViewModel: LauncherViewModel? = null
     // Search preview: the result rows keyed by the toggle that owns them, so a
     // tick can show and hide them without rebuilding the window.
     private val searchRows = mutableMapOf<String, View>()
@@ -93,6 +95,8 @@ class SettingsPreviewView @JvmOverloads constructor(
         folderCard = null
         folderCardBg = null
         folderTitleView = null
+        folderIconImageView = null
+        cachedViewModel = viewModel
         searchRows.clear()
         searchAppsSecondRow = null
         searchBar = null
@@ -115,6 +119,7 @@ class SettingsPreviewView @JvmOverloads constructor(
         tick(prefs)
     }
 
+    @Suppress("LongMethod", "CyclomaticComplexMethod")
     fun tick(prefs: LauncherPrefs) {
         when (kind) {
             PreviewKind.ICON_ROW -> {
@@ -153,6 +158,31 @@ class SettingsPreviewView @JvmOverloads constructor(
                     ?: DEFAULT_FOLDER_RADIUS_DP
                 (folderCardBg as? GradientDrawable)?.cornerRadius =
                     radius * resources.displayMetrics.density
+
+                val resolved = Styles.resolve(context, prefs).of(SurfaceId.FOLDER)
+                (folderCardBg as? GradientDrawable)?.setColor(resolved.surface)
+                folderIconImageView?.let { img ->
+                    val icons = cachedViewModel?.let { sampleApps(it, 9).map { app -> app.second } } ?: emptyList()
+                    img.setImageDrawable(
+                        FolderIconDrawable(
+                            icons, dp(64),
+                            style = prefs.folderPreviewStyle,
+                            plateColor = FolderIconDrawable.plateColor(
+                                prefs.folderMatchWindowColor, prefs.folderPlateColor, resolved.surface,
+                                com.supernova.launcher.ui.theme.OneUiTheme.defaultFolderPlateColor(
+                                    com.supernova.launcher.ui.theme.OneUiTheme.activeVariant(context, prefs)
+                                )
+                            ),
+                            shape = FolderIconDrawable.plateShape(prefs.folderIconShape, prefs),
+                            customSpec = com.supernova.launcher.data.CustomShapeSpec.decode(prefs.iconShapeCustom),
+                            outlineColor = if (prefs.folderIconOutline) resolved.accent else 0,
+                            outlineWidthPx = 2f * resources.displayMetrics.density,
+                            prioritizeFirst = prefs.folderPrioritizeFirst,
+                            glass = FolderIconDrawable.glassFor(prefs),
+                            shadow = prefs.iconShadow
+                        )
+                    )
+                }
             }
             PreviewKind.DRAWER -> {
                 com.supernova.launcher.ui.theme.SurfaceShapes.setColor(surfaceBg, withAlpha(styleAlpha ?: prefs.drawerBgOpacity))
@@ -170,8 +200,14 @@ class SettingsPreviewView @JvmOverloads constructor(
                 searchRows["folder"]?.visibility = if (prefs.searchFolders) VISIBLE else GONE
                 styleLabels(prefs, visible = true)
             }
-            PreviewKind.SEARCH_BAR -> searchBarSurface?.let { surface ->
-                searchBar?.apply(SearchBarConfig.decode(prefs.searchBarConfig).desktop, surface)
+            PreviewKind.SEARCH_BAR -> {
+                val surface = Styles.resolve(context, prefs).of(SurfaceId.SEARCH_BAR)
+                searchBarSurface = surface
+                searchBar?.apply(
+                    SearchBarConfig.decode(prefs.searchBarConfig).desktop,
+                    surface,
+                    prefs.searchBarColoredIcons
+                )
             }
             PreviewKind.DRAWER_SEARCH_BAR -> styleDrawerField(prefs)
             null -> Unit
@@ -529,6 +565,7 @@ class SettingsPreviewView @JvmOverloads constructor(
         val resolved = Styles.resolve(context, prefs).of(SurfaceId.FOLDER)
         val icons = sampleApps(viewModel, 9).map { it.second }
         val image = ImageView(context)
+        folderIconImageView = image
         image.setImageDrawable(
             FolderIconDrawable(
                 icons, dp(64),

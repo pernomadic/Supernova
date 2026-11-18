@@ -42,6 +42,7 @@ class DragGridView @JvmOverloads constructor(
     private val sparkle = sparklePath(SPARKLE_RADIUS_DP * density)
     private val sparklePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE }
     private val shadowRadius = SHADOW_RADIUS_DP * density
+    @Suppress("UnusedPrivateProperty")
     private val outlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = OUTLINE_STROKE_DP * density
@@ -172,7 +173,7 @@ class DragGridView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         if (cols <= 0 || rows <= 0 || grid.isEmpty) return
         if (drawsOutline) {
-            if (hasOutline) canvas.drawRect(outline, outlinePaint)
+            // Drag outline removed to match OneUI's clean drag experience.
             return
         }
         val cellW = grid.width() / cols

@@ -1892,14 +1892,46 @@ class SettingsActivity : AppCompatActivity() {
     // which is the order the row draws them in.
     private fun showSearchChipsEditor() {
         val all = com.supernova.launcher.search.SearchChip.entries
-        val labels = all.map { getString(EnumLabels.of(it)) }.toTypedArray()
         val selected = com.supernova.launcher.search.SearchChip
             .decode(viewModel.state.value.prefs.searchChips)
-        val checked = BooleanArray(all.size) { all[it] in selected }
+        val checked = all.map { it in selected }.toBooleanArray()
+        val labels = all.map { getString(EnumLabels.of(it)) }
+
+        val listView = android.widget.ListView(this)
+        val adapter = object : android.widget.BaseAdapter() {
+            override fun getCount(): Int = all.size
+            override fun getItem(position: Int) = all[position]
+            override fun getItemId(position: Int) = position.toLong()
+            override fun getView(position: Int, convertView: View?, parent: android.view.ViewGroup?): View {
+                val checkView = (convertView as? android.widget.CheckedTextView)
+                    ?: android.widget.CheckedTextView(this@SettingsActivity).apply {
+                        val padH = dp(CHIP_DIALOG_PAD_H_DP)
+                        val padV = dp(CHIP_DIALOG_PAD_V_DP)
+                        setPadding(padH, padV, padH, padV)
+                        textSize = CHIP_DIALOG_TEXT_SP
+                        setTextColor(
+                            androidx.core.content.ContextCompat.getColor(
+                                this@SettingsActivity, R.color.textPrimary
+                            )
+                        )
+                        checkMarkDrawable = androidx.appcompat.content.res.AppCompatResources.getDrawable(
+                            this@SettingsActivity, R.drawable.checkbox_box
+                        )
+                    }
+                checkView.text = labels[position]
+                checkView.isChecked = checked[position]
+                return checkView
+            }
+        }
+        listView.adapter = adapter
+        listView.setOnItemClickListener { _, _, position, _ ->
+            checked[position] = !checked[position]
+            adapter.notifyDataSetChanged()
+        }
 
         MaterialAlertDialogBuilder(this)
             .setTitle(R.string.search_chips)
-            .setMultiChoiceItems(labels, checked) { _, which, isChecked -> checked[which] = isChecked }
+            .setView(listView)
             .setPositiveButton(R.string.ok) { _, _ ->
                 viewModel.set(
                     Pref.searchChips,
@@ -2232,6 +2264,9 @@ class SettingsActivity : AppCompatActivity() {
 
     companion object {
         private const val DISABLED_ALPHA = 0.38f
+        private const val CHIP_DIALOG_PAD_H_DP = 24
+        private const val CHIP_DIALOG_PAD_V_DP = 14
+        private const val CHIP_DIALOG_TEXT_SP = 16f
 
         // Lines a tick box up with the dialog message's 24dp text edge.
         private const val TICK_LIST_SIDE_DP = 18

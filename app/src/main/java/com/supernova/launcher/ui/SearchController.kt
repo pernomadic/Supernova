@@ -676,25 +676,55 @@ class SearchController(
             ui.root.layoutParams = params
         }
         if (windowMode) {
-            ui.root.background = com.supernova.launcher.ui.theme.SurfaceShapes.background(
-                resolved.surface, null, binding.root.dp(24f)
-            )
-            ui.root.clipToOutline = true
+            applyWindowModeStyle(ui, resolved, bar)
         } else {
-            ui.root.setBackgroundColor(android.graphics.Color.TRANSPARENT)
-            ui.root.clipToOutline = false
+            applyImmersiveModeStyle(ui, prefs)
         }
         ui.searchPill.background = windowBarBackground(prefs, bar)
-        ui.searchInput.setTextColor(bar.text)
-        ui.searchInput.setHintTextColor((0x99 shl 24) or (bar.text and 0xFFFFFF))
-        ui.searchGhost.setTextColor((0x80 shl 24) or (bar.text and 0xFFFFFF))
         ui.searchGhost.typeface = ui.searchInput.typeface
-        val iconTint = ColorStateList.valueOf(SearchBarButtons.iconTint(bar.text))
-        ImageViewCompat.setImageTintList(ui.searchIcon, iconTint)
         overlaySurface?.let { surface ->
             surface.appliedStyle = null
             styleSurface(surface)
         }
+    }
+
+    private fun applyWindowModeStyle(
+        ui: ViewSearchOverlayBinding,
+        resolved: com.supernova.launcher.ui.theme.ResolvedSurface,
+        bar: com.supernova.launcher.ui.theme.ResolvedSurface
+    ) {
+        ui.root.background = com.supernova.launcher.ui.theme.SurfaceShapes.background(
+            resolved.surface, null, binding.root.dp(24f)
+        )
+        ui.root.clipToOutline = true
+        ui.searchInput.setTextColor(bar.text)
+        ui.searchInput.setHintTextColor((0x99 shl 24) or (bar.text and 0xFFFFFF))
+        ui.searchGhost.setTextColor((0x80 shl 24) or (bar.text and 0xFFFFFF))
+        val iconTint = ColorStateList.valueOf(SearchBarButtons.iconTint(bar.text))
+        ImageViewCompat.setImageTintList(ui.searchIcon, iconTint)
+    }
+
+    private fun applyImmersiveModeStyle(
+        ui: ViewSearchOverlayBinding,
+        prefs: com.supernova.launcher.data.LauncherPrefs
+    ) {
+        val variant = com.supernova.launcher.ui.theme.OneUiTheme.activeVariant(binding.root.context, prefs)
+        val isDark = variant.isDark
+        val bgTint = when (variant) {
+            com.supernova.launcher.ui.theme.ThemeStyleVariant.DARK_AMOLED -> IMMERSIVE_TINT_AMOLED
+            com.supernova.launcher.ui.theme.ThemeStyleVariant.DARK_DEFAULT -> IMMERSIVE_TINT_DARK
+            com.supernova.launcher.ui.theme.ThemeStyleVariant.LIGHT_FROSTED -> IMMERSIVE_TINT_FROSTED
+            com.supernova.launcher.ui.theme.ThemeStyleVariant.LIGHT_DEFAULT -> IMMERSIVE_TINT_LIGHT
+        }
+        ui.root.setBackgroundColor(bgTint)
+        ui.root.clipToOutline = false
+        val textColor = if (isDark) android.graphics.Color.WHITE else 0xFF1C1C1E.toInt()
+        val hintColor = if (isDark) 0x99FFFFFF.toInt() else 0x991C1C1E.toInt()
+        ui.searchInput.setTextColor(textColor)
+        ui.searchInput.setHintTextColor(hintColor)
+        ui.searchGhost.setTextColor(if (isDark) 0x80FFFFFF.toInt() else 0x801C1C1E.toInt())
+        val iconTint = ColorStateList.valueOf(textColor)
+        ImageViewCompat.setImageTintList(ui.searchIcon, iconTint)
     }
 
     // The window's bar is the home bar opened up: the same glass or fill,
@@ -741,6 +771,10 @@ class SearchController(
 
     private companion object {
         const val SEARCH_BLUR_RADIUS = 90f
+        const val IMMERSIVE_TINT_AMOLED = 0xB3000000.toInt()
+        const val IMMERSIVE_TINT_DARK = 0x99101216.toInt()
+        const val IMMERSIVE_TINT_FROSTED = 0x99F0F2F6.toInt()
+        const val IMMERSIVE_TINT_LIGHT = 0xB3FFFFFF.toInt()
         const val DARK_LUMINANCE_THRESHOLD = 0.4
         const val OPAQUE = 255
         const val TOP_HIT_MIN_CHARS = 3

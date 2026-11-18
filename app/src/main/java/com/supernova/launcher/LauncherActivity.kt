@@ -712,7 +712,7 @@ class LauncherActivity :
                 addAction(Intent.ACTION_SCREEN_OFF)
                 addAction(Intent.ACTION_USER_PRESENT)
             },
-            androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
+            androidx.core.content.ContextCompat.RECEIVER_EXPORTED
         )
     }
 
@@ -953,11 +953,13 @@ class LauncherActivity :
     // OneUI-style unlock entrance animation if enabled.
     private var pendingUnlockAnimation = false
     private var lastUserPresentTime = 0L
+    private var wasKeyguardLocked = false
     private var lastLaunchAnchor: java.lang.ref.WeakReference<View>? = null
     private val screenOffReceiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(context: android.content.Context, intent: Intent) {
             when (intent.action) {
                 Intent.ACTION_SCREEN_OFF -> {
+                    wasKeyguardLocked = true
                     pendingUnlockAnimation = false
                     privateSpaceCard.cancelPending()
                     resetToHome(animate = false, keepDrawer = drawerKeptBehindLaunch)
@@ -1013,6 +1015,8 @@ class LauncherActivity :
     }
 
     override fun onStop() {
+        val km = getSystemService(android.app.KeyguardManager::class.java)
+        wasKeyguardLocked = km?.isKeyguardLocked == true
         // The launched app covers the launcher now: its circle can go, and
         // the lifted icon comes back.
         launchPrelude.clear()
@@ -1031,8 +1035,12 @@ class LauncherActivity :
         // open is one they came back to, not one parked behind an app.
         drawerKeptBehindLaunch = false
         reopenDockIfAutoClosed()
+        val km = getSystemService(android.app.KeyguardManager::class.java)
+        val isLocked = km?.isKeyguardLocked == true
         val justUnlocked = pendingUnlockAnimation ||
+            (wasKeyguardLocked && !isLocked) ||
             (lastUserPresentTime > 0L && SystemClock.elapsedRealtime() - lastUserPresentTime < UNLOCK_WINDOW_MS)
+        wasKeyguardLocked = false
         pendingUnlockAnimation = false
         if (justUnlocked) {
             lastUserPresentTime = 0L
@@ -1040,11 +1048,20 @@ class LauncherActivity :
         } else {
             lastLaunchAnchor?.get()?.let { view ->
                 lastLaunchAnchor = null
-                view.scaleX = ONEUI_MINIMIZE_SCALE
-                view.scaleY = ONEUI_MINIMIZE_SCALE
-                view.alpha = ONEUI_MINIMIZE_ALPHA
-                view.animate()
-                    .scaleX(1f).scaleY(1f).alpha(1f)
+                view.postDelayed({
+                    view.scaleX = ONEUI_MINIMIZE_SCALE
+                    view.scaleY = ONEUI_MINIMIZE_SCALE
+                    view.alpha = ONEUI_MINIMIZE_ALPHA
+                    view.animate()
+                        .scaleX(1f).scaleY(1f).alpha(1f)
+                        .setDuration(ONEUI_MINIMIZE_DURATION_MS)
+                        .setInterpolator(PathInterpolator(ONEUI_INTERPOLATOR_X1, ONEUI_INTERPOLATOR_Y1, 0f, 1f))
+                        .start()
+                }, ONEUI_MINIMIZE_DELAY_MS)
+                binding.workspacePager.scaleX = ONEUI_WORKSPACE_SETTLE_SCALE
+                binding.workspacePager.scaleY = ONEUI_WORKSPACE_SETTLE_SCALE
+                binding.workspacePager.animate()
+                    .scaleX(1f).scaleY(1f)
                     .setDuration(ONEUI_MINIMIZE_DURATION_MS)
                     .setInterpolator(PathInterpolator(ONEUI_INTERPOLATOR_X1, ONEUI_INTERPOLATOR_Y1, 0f, 1f))
                     .start()
@@ -1576,8 +1593,6 @@ class LauncherActivity :
         when (viewModel.state.value.prefs.searchBarTapAction) {
             com.supernova.launcher.ui.SearchBarTapAction.CHROME ->
                 com.supernova.launcher.ui.SearchBarButtons.openChromeSearch(this)
-            com.supernova.launcher.ui.SearchBarTapAction.FINDER ->
-                com.supernova.launcher.ui.openSamsungFinder(this)
             com.supernova.launcher.ui.SearchBarTapAction.DEFAULT -> {
                 if (viewModel.state.value.prefs.homeScreenLayout == com.supernova.launcher.data.HomeScreenLayout.HOME_ONLY) {
                     search.open()
@@ -2943,9 +2958,9 @@ class LauncherActivity :
     // app opens with once its circle has filled the screen; Adaptive icon
     // falls back to the plain scale-up when its icon can't be pictured.
     private fun launchOptions(style: LaunchAnimation, anchor: View): android.os.Bundle = when (style) {
-        LaunchAnimation.SYSTEM, LaunchAnimation.REVEAL -> android.app.ActivityOptions
+        LaunchAnimation.ONEUI, LaunchAnimation.SYSTEM, LaunchAnimation.REVEAL -> android.app.ActivityOptions
             .makeClipRevealAnimation(anchor, 0, 0, anchor.width, anchor.height)
-        LaunchAnimation.ONEUI, LaunchAnimation.ADAPTIVE_ICON, LaunchAnimation.ZOOM -> android.app.ActivityOptions
+        LaunchAnimation.ADAPTIVE_ICON, LaunchAnimation.ZOOM -> android.app.ActivityOptions
             .makeScaleUpAnimation(anchor, 0, 0, anchor.width, anchor.height)
         LaunchAnimation.CIRCLE -> android.app.ActivityOptions
             .makeCustomAnimation(this, R.anim.launch_fade_enter, R.anim.launch_fade_exit)
@@ -4744,17 +4759,39 @@ class LauncherActivity :
     // Wallpapers: the installed wallpaper apps, or an image from any folder.
     private fun showWallpaperSources() {
         val sources = arrayOf(getString(R.string.wallpaper_apps), getString(R.string.wallpaper_from_files))
-        MaterialAlertDialogBuilder(this)
-            .setTitle(R.string.home_action_wallpaper)
-            .setItems(sources) { _, which ->
-                if (which == 0) {
-                    runLogged("open wallpaper picker") { startActivity(Intent(Intent.ACTION_SET_WALLPAPER)) }
-                } else {
-                    runLogged("open wallpaper file picker") { pickWallpaperFileLauncher.launch(arrayOf("image/*")) }
-                        .onFailure { Toast.makeText(this, R.string.launch_failed, Toast.LENGTH_SHORT).show() }
+        runCatching {
+            MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.home_action_wallpaper)
+                .setItems(sources) { _, which ->
+                    if (which == 0) {
+                        runLogged("open wallpaper picker") {
+                            val intents = listOf(
+                                Intent("com.samsung.android.app.dressroom.action.START_WALLPAPER_SETTINGS"),
+                                Intent(Intent.ACTION_SET_WALLPAPER)
+                            )
+                            var launched = false
+                            for (intent in intents) {
+                                if (intent.resolveActivity(packageManager) != null) {
+                                    startActivity(intent)
+                                    launched = true
+                                    break
+                                }
+                            }
+                            if (!launched) {
+                                startActivity(Intent(Intent.ACTION_SET_WALLPAPER))
+                            }
+                        }.onFailure {
+                            Toast.makeText(this, R.string.launch_failed, Toast.LENGTH_SHORT).show()
+                        }
+                    } else {
+                        runLogged("open wallpaper file picker") { pickWallpaperFileLauncher.launch(arrayOf("image/*")) }
+                            .onFailure { Toast.makeText(this, R.string.launch_failed, Toast.LENGTH_SHORT).show() }
+                    }
                 }
-            }
-            .showTracked()
+                .showTracked()
+        }.onFailure {
+            Toast.makeText(this, R.string.launch_failed, Toast.LENGTH_SHORT).show()
+        }
     }
 
     // The picked image opens in Supernova's own crop screen, which asks
@@ -5156,5 +5193,7 @@ class LauncherActivity :
         private const val ONEUI_INTERPOLATOR_Y1 = 0.25f
         private const val ONEUI_LAUNCH_PRESS_SCALE = 0.92f
         private const val ONEUI_LAUNCH_PRESS_DURATION_MS = 120L
+        private const val ONEUI_MINIMIZE_DELAY_MS = 60L
+        private const val ONEUI_WORKSPACE_SETTLE_SCALE = 0.97f
     }
 }
