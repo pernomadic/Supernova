@@ -47,7 +47,7 @@ object StylePickerSheet {
     )
 
     private enum class Slot { SURFACE, TEXT, ACCENT }
-    private const val DEFAULT_BLUR_PERCENT = 90
+    private const val DEFAULT_BLUR_PERCENT = 100
 
     // The home bar's opacity is on its own page, with its radius.
     private val OPACITY_SURFACES = setOf(
